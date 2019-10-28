@@ -1,0 +1,124 @@
+---
+title: "Biome-shiny HTML report"
+output: html_document
+runtime: shiny
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(shinydashboard)
+library(microbiome)
+library(phyloseq)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(knitr)
+library(dplyr)
+library(ggpubr)
+library(hrbrthemes)
+library(reshape2)
+library(vegan)
+```
+# Phyloseq File Summary
+
+Basic information about the loaded dataset.
+
+```{r, echo=FALSE, error=TRUE}
+  summarize_phyloseq(datasetInput())
+```
+
+# Core Microbiota
+
+This section seeks to identify and display, in table and plot form, the most abundant microbiota in the dataset. In future versions it will allow the user to use these parameters to filter the loaded dataset.
+
+## File Summary
+
+Basic information about the loaded dataset after applying filters.
+
+```{r, echo=FALSE, error=TRUE}
+if( input$renderCoreTaxaSummary == "Yes"){
+  summarize_phyloseq(corePhylo())
+}
+```
+
+
+
+## Prevalence Tables
+```{r, echo=FALSE, error=TRUE}
+if (input$renderPrevTables == "Yes"){
+  prevalenceAbsolute()
+  prevalenceRelative()
+}
+```
+## Core Taxa Heatmap 
+```{r, echo=FALSE, error=TRUE}
+if(input$renderCoreHeatmap == "Yes"){
+  coreHeatmapParams()
+}
+```
+
+# Community Composition
+## Abundance Plot (Counts
+```{r, echo=FALSE, error=TRUE}
+if (input$renderSampleAbundancePlot == "Yes"){
+  communityPlotParams()
+}
+```
+## Abundance Plot (Relative
+```{r, echo=FALSE, error=TRUE}
+if( input$renderRelativeAbundancePlot == "Yes"){
+  communityPlotGenusParams()
+}
+```
+## Taxa Prevalence Plot
+```{r, echo=FALSE, error=TRUE}
+if(input$renderPrevalencePlot == "Yes"){
+  communityPrevalenceParams()
+}
+```
+
+# Alpha Diversity
+## Richness Plot
+```{r, echo=FALSE, error=TRUE}
+if( input$renderRichness == "Yes"){
+  richnessPlotParams()
+}
+```
+
+# Beta Diversity
+## Ordination Plot
+```{r, echo=FALSE, error=TRUE}
+if (input$renderOrdplot == "Yes"){
+  ordinatePlotParams()
+}
+```
+## Split (Metadata/Taxa) Ordination Plot
+```{r, echo=FALSE, error=TRUE}
+if( input$renderSplitOrdplot == "Yes"){
+  splitOrdParams()
+}
+```
+## Taxa Ordination Plot
+```{r, echo=FALSE, error=TRUE}
+if(input$renderTaxaplot == "Yes"){
+  taxaOrdParams()
+}
+```
+
+# PERMANOVA analysis
+##P-value and Homogeniety Tables##
+```{r, echo=FALSE, error=TRUE}
+if( input$renderPValueTables == "Yes"){
+  pValue()}
+
+```
+```{r, echo=FALSE, error=TRUE}
+if( input$renderPValueTables == "Yes"){
+  homogenietyParams()}
+```
+## Network Plot
+```{r, echo=FALSE, error=TRUE}
+if(input$renderNetworkMap == "Yes"){
+  netPlotParams()
+}
+```
