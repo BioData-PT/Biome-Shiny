@@ -153,7 +153,7 @@ server <- function(input, output, session) {
             simpleError("Error importing the .biom file.")
           })
       }
-      if(input$datasetType == ".biom file with .csv mapping file"){ #Loads a .csv along with the .biom
+      if(input$datasetType == ".biom file with .csv metadata file"){ #Loads a .csv along with the .biom
         req(input$dataset2)
         req(input$datapathMetadata)
         tryCatch({
@@ -167,18 +167,18 @@ server <- function(input, output, session) {
           datapathMetadata <- input$datasetMetadata$datapath
           b <- sample_data(as.data.frame(read.csv(datapathMetadata, skipNul = TRUE)))
         }, error = function(e){
-          simpleError("Error importing the .csv mapping file.")
+          simpleError("Error importing the .csv metadata file.")
         })
 
         tryCatch({
           biomfile <- merge_phyloseq(a,b)
           return(biomfile)
         }, error = function(e){
-          simpleError("Error in merging .biom file with .csv mapping file.")
+          simpleError("Error in merging .biom file with .csv metadata file.")
         })
       }
 
-      if(input$datasetType == ".biom file without .csv mapping file"){ #Loads a .biom file and generates sample metadata
+      if(input$datasetType == ".biom file without .csv metadata file"){ #Loads a .biom file and generates sample metadata
           req(input$dataset3)
           tryCatch({
             datapath <- input$dataset3$datapath
@@ -278,7 +278,7 @@ server <- function(input, output, session) {
     # Core with compositionals:
     detections <- 10^seq(log10(as.numeric(input$detectionMin)), log10(1), length = 10)
     gray <- rev(brewer.pal(5,"Spectral"))
-    coreplot <- plot_core(compositionalInput(), plot.type = "heatmap", colours = gray, prevalences = 0, detections = detections) + xlab("Detection Threshold (Relative Abundance (%))")
+    coreplot <- plot_core(compositionalInput(), plot.type = "heatmap", colours = gray, prevalences = 0, detections = detections) + xlab("Detection Threshold (Relative Abundance)")
     if(input$transparentCoreHeatmap == TRUE){
       coreplot <- coreplot +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))

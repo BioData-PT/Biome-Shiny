@@ -188,7 +188,7 @@ ui <- dashboardPage(
           selected = "Use sample dataset"
         ),
         conditionalPanel( condition = "input.datasetChoice == 'Upload dataset'",
-                          radioButtons("datasetType", "Select dataset characteristics:", c(".biom file including sample variables",".biom file with .csv mapping file",".biom file without .csv mapping file"))
+                          radioButtons("datasetType", "Select dataset characteristics:", c(".biom file including sample variables",".biom file with .csv metadata file",".biom file without .csv metadata file"))
         ),
         conditionalPanel(
           condition = "input.datasetType == '.biom file including sample variables'",
@@ -200,24 +200,24 @@ ui <- dashboardPage(
           )
         ),
         conditionalPanel(
-          condition = "input.datasetType == '.biom file without .csv mapping file'",
+          condition = "input.datasetType == '.biom file without .csv metadata file'",
           fileInput(
             "dataset3",
             "Dataset:",
             multiple = FALSE,
             accept = c(".biom"), placeholder="Phyloseq .biom files"
           ),
-          checkboxInput("samplesAreColumns","OTU Table: Samples are columns", value = FALSE)
+          checkboxInput("samplesAreColumns","OTU Table: Samples are columns", value = TRUE)
         ),
         conditionalPanel(
-          condition = "input.datasetType == '.biom file with .csv mapping file'",
+          condition = "input.datasetType == '.biom file with .csv metadata file'",
           fileInput(
             "dataset2",
             "Dataset:",
             multiple = FALSE,
             accept = c(".biom"), placeholder="Phyloseq .biom files"
           ),
-          fileInput("datasetMetadata", ".csv mapping file (sample variables):",
+          fileInput("datasetMetadata", ".csv metadata file (sample variables):",
                     multiple = FALSE,
                     accept = c(".csv"), placeholder=".csv files"
           )
@@ -255,7 +255,7 @@ ui <- dashboardPage(
                  tabsetPanel(
                    tabPanel("Variables",
                             box( title = "Variables", collapsible = TRUE,
-                              numericInput("detectionPrevalence2", "Detection (Relative Abundance %):", min = 0.00, max = 100, value = 0.01, step = 0.01),
+                              numericInput("detectionPrevalence2", "Detection (Relative Abundance):", min = 0.00, max = 100, value = 0.01, step = 0.01),
                               bsTooltip("detectionPrevalence2", "Minimum relative abundance value for the OTU or sample.", "right", options = list(container = "body")),
                               numericInput("prevalencePrevalence","Prevalence:", min = 0, max = 1, value = 0.5, step = 0.05),
                               bsTooltip("prevalencePrevalence", "Ratio or % of samples in which the OTU/species has the chosen detection value.", "right", options = list(container = "body")),
@@ -271,7 +271,7 @@ ui <- dashboardPage(
         tabPanel("Core Taxa Visualization",
                    fixedRow(
                             box( width = "2", collapsible = TRUE,
-                                textInput("detectionMin", label = "Minimum detection threshold (Relative Abundance(%))", value = "0.0000001"),
+                                textInput("detectionMin", label = "Minimum detection threshold (Relative Abundance)", value = "0.0000001"),
                                 bsTooltip("detectionMin", "Lowest detection value on the heatmap. Value must be higher than 0.", "left", options = list(container = "body")),
                                 checkboxInput("transparentCoreHeatmap", "Transparent background", value = TRUE)
                               ),
@@ -344,7 +344,7 @@ ui <- dashboardPage(
                    tabPanel( title = "Abundance (Counts)",
                              dataTableOutput("absoluteAbundanceTable"), downloadButton("downloadAbundance")
                    ),
-                   tabPanel( title = "Abundance (%)",
+                   tabPanel( title = "Abundance (Relative)",
                              dataTableOutput("relativeAbundanceTable"), downloadButton("downloadRelativeAbundance")
                    )
                  )
@@ -361,7 +361,7 @@ ui <- dashboardPage(
                              box(
                                width = "2",
                                title = "Variables",
-                               # #X (the metadata) and Y (the diversity measure)
+                               # X (the metadata) and Y (the diversity measure)
                                selectInput(
                                  "x2",
                                  "Samples:",

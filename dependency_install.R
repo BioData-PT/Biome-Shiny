@@ -14,7 +14,7 @@ package_check_and_install_bioconductor = function(packages = c("package1","packa
 
 #Packages installed through CRAN
 
-package_check_and_install(c("shiny","shinydashboard","dplyr","knitr","rmarkdown","DT",
+package_check_and_install(c("shiny","shinydashboard","shinyBS","dplyr","knitr","rmarkdown","DT",
                             "ggplot2","ggpubr","hrbrthemes","ggplotify","RColorBrewer",
                             "plotly","reshape2","vegan","abundant","BiocManager"))
 
