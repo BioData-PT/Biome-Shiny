@@ -125,6 +125,12 @@ report.source <- reactive({
   return(report)
 })
 
+#Function to collect all tables and images
+
+collect_content <- function(){
+    orca(communityPlotParams(), file = "community_plot.png")
+}
+
 
 # Load sample datasets #
 data("dietswap")
@@ -214,7 +220,7 @@ server <- function(input, output, session) {
   # New DatasetInput function works as an intermediary that checks if the dataset has been altered
   datasetInput <- reactive({
     if(input$coreFilterDataset == TRUE ){ # Filters the dataset
-      dataset <- corePhylo()
+      dataset <- filterData()
     }
     if(input$coreFilterDataset == FALSE ) { # Standard dataset input without filtering applied
       dataset <- datasetChoice()
@@ -223,8 +229,43 @@ server <- function(input, output, session) {
   })
 
 
-  ## Core Microbiota ##
-  #Filtering the dataset
+  ## Dataset Filtering ##
+  
+  ## Populate SelectInput with taxonomic ranks ##
+  observeEvent(input$datasetUpdate, {
+    tryCatch({
+      updateSelectInput(session, "subsetTaxaByRank",
+                               choices = colnames(tax_table(datasetInput())))
+    }, error = function(e) {
+      simpleError(e)
+    })
+  }, ignoreNULL = FALSE)
+  
+  ## Update Checkbox Group based on the chosen taxonomic rank ##
+  observeEvent(input$subsetTaxaByRank, {
+    tryCatch({
+      updateCheckboxGroupInput(session, "subsetTaxaByRankTaxList",
+                               choices = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]]),
+                               selected = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]])
+              )
+    }, error = function(e) {
+      simpleError(e)
+    })
+  })
+  
+  ## Update subsetSamples Checkbox Group ##
+  observeEvent(input$datasetUpdate, {
+    tryCatch({
+      updateCheckboxGroupInput(session, "subsetSamples",
+                               choices = colnames(otu_table(datasetChoice())),
+                               selected = colnames(otu_table(datasetChoice()))
+                )
+      }, error = function(e) {
+        simpleError(e)
+      })
+  })
+  
+  ## Table generation functions ##
   prevalenceAbsolute <- reactive({
     a <- as.data.frame(prevalence(compositionalInput(), detection = input$detectionPrevalence2/100, sort = TRUE, count = TRUE))
     names(a) <- c("Prevalence (counts)")
@@ -235,17 +276,44 @@ server <- function(input, output, session) {
     names(a) <- c("Prevalence (relative)")
     return(a)
   })
-
-  # Produce phyloseq file with core OTUs only
-  corePhylo <- reactive({
-    core(datasetChoice(), detection = input$detectionPrevalence2, prevalence = input$prevalencePrevalence )
+  
+  ## Function to apply filters to the dataset ##
+  filterData <- reactive({
+    physeq <- datasetChoice()
+    # Subset data by taxonomic rank - commented out for now since I'm having issues implementing it
+    if (input$subsetTaxaByRankCheck == TRUE){
+      oldMA <- tax_table(physeq)
+      oldDF <- data.frame(oldMA)
+      newMA <- prune_taxa(oldDF[[input$subsetTaxaByRank]] %in% input$subsetTaxaByRankTaxList, oldMA)
+      # newDF <- subset(oldDF, oldDF[[input$subsetTaxaByRank]] ==  input$subsetTaxaByRankTaxList )
+      # newMA <- as(newDF, "matrix")
+      # if (inherits(physeq, "taxonomyTable")) {
+      #   return(tax_table(newMA))
+      # }
+      # else {
+      tax_table(physeq) <- tax_table(newMA)
+      # }
+    }
+    # Filter top X taxa
+    if (input$pruneTaxaCheck == TRUE){
+      filterTaxa <- names(sort(taxa_sums(a), decreasing = TRUE)[1:input$pruneTaxa])
+      physeq <- prune_taxa(filterTaxa, physeq)
+    }
+    if (input$subsetSamplesCheck == TRUE){
+      oldDF <- as(sample_data(physeq), "data.frame")
+      newDF <- subset(oldDF, colnames(otu_table(physeq)) %in% input$subsetSamples)
+      sample_data(physeq) <- sample_data(newDF)
+    }
+    #physeq <- filter_taxa(physeq, prune = TRUE, flist = filterfun(kOverA(A = input$detectionPrevalence2, k = 1)) )
+    physeq <- core(physeq, detection = 0, prevalence = input$prevalencePrevalence )
+    return(physeq)
   })
 
   output$corePhyloSummary <- renderPrint({ # Summary of corePhylo file
-    summarize_phyloseq(corePhylo())
+    summarize_phyloseq(filterData)
   })
   output$coreTaxa <- renderPrint({ # Reports the taxa in corePhylo
-    taxa(corePhylo())
+    taxa(filterData)
   })
 
   output$prevalenceAbsoluteOutput <- renderDT({
@@ -274,6 +342,8 @@ server <- function(input, output, session) {
     }
   )
 
+  ## Core Microbiota ##
+  
   coreHeatmapParams <- reactive({
     # Core with compositionals:
     detections <- 10^seq(log10(as.numeric(input$detectionMin)), log10(1), length = 10)
@@ -291,6 +361,7 @@ server <- function(input, output, session) {
   })
 
   ## Community Composition ##
+
 
   # Updating SelectInputs when database changes #
   observeEvent(input$datasetUpdate, {
@@ -327,7 +398,7 @@ server <- function(input, output, session) {
   })
 
   # Abundance of taxa in sample variable by taxa
-  communityPlotParams <- reactive ({
+  communityPlotParams <- reactive ({ #Filtering the data seems to produce some strange results. The filtering appears to work fine though.
     if(input$communityPlotFacetWrap == FALSE){
       compositionplot <- plot_ordered_bar(datasetInput(), x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
     } else {
