@@ -148,7 +148,7 @@ ui <- dashboardPage(
         "Data Upload  (1/3)",
         tabName = "intro"
       ),
-      
+
       menuItem("Filtering (2/3)", tabName="dataprocessing"),
       menuItem("Phyloseq Summary  (3/3)", tabName="phyloseqsummary"),
       br(),
@@ -237,7 +237,7 @@ ui <- dashboardPage(
         ),
         actionButton("datasetUpdate", "Update Dataset"),
         bsTooltip("datasetUpdate", "Click to update metadata rows when changing datasets.", "bottom", options = list(container = "body"))
-        
+
       ),
       box(
         paste0(
@@ -245,11 +245,12 @@ ui <- dashboardPage(
         )
       )
     ),
-    
+
     tabItem(tabName="dataprocessing",
                      tabsetPanel(
                        tabPanel("Variables",
-                                box( 
+                                fluidRow(
+                                box(
                                      title = "Fiter by abundance", collapsible = TRUE,
                                      #numericInput("detectionPrevalence2", "Minimum Abundance:", min = 0.00, max = 100, value = 0, step = 1),
                                      #bsTooltip("detectionPrevalence2", "Minimum abundance value of OTUs.", "right", options = list(container = "body")),
@@ -257,12 +258,12 @@ ui <- dashboardPage(
                                      bsTooltip("prevalencePrevalence", "Ratio of OTU presence in samples. ", "right", options = list(container = "body")),
                                      checkboxInput("coreFilterDataset", "Set as active dataset", value = FALSE)
                                 ),
-                                box( 
+                                box(
                                     title = "Prune and subset taxa",
                                     checkboxInput("pruneTaxaCheck", "Keep the top taxa"),
                                     conditionalPanel(
                                       condition = "input.pruneTaxaCheck == 1",
-                                      numericInput("pruneTaxa", label = "Number of top taxa:", value = "10", min = "1")               
+                                      numericInput("pruneTaxa", label = "Number of top taxa:", value = "10", min = "1")
                                     ),
                                     checkboxInput("subsetTaxaByRankCheck", "Subset taxa by taxonomy rank"),
                                     conditionalPanel(
@@ -274,16 +275,16 @@ ui <- dashboardPage(
                                 box(
                                     title = "Remove samples", collapsible = TRUE, collapsed = TRUE,
                                     checkboxInput("subsetSamplesCheck", label = "Remove unchecked samples"),
-                                    checkboxGroupInput("subsetSamples", label = "Samples:", choices = "")
+                                    checkboxGroupInput("subsetSamples", inline = TRUE, label = "Samples:", choices = "")
                                 )
-                       ),
+                       )),
                        tabPanel("Absolute prevalence", dataTableOutput("prevalenceAbsoluteOutput"), downloadButton("downloadPrevalenceAbsolute")),
                        tabPanel("Relative prevalence", dataTableOutput("prevalenceRelativeOutput"), downloadButton("downloadPrevalenceRelative"))#,
                        #tabPanel("Summary", verbatimTextOutput("corePhyloSummary")),
                        #tabPanel("Taxa", verbatimTextOutput("coreTaxa"))
                      )
     ),
-    
+
     tabItem(tabName = "phyloseqsummary",
             h1("Phyloseq Summary"),
             verbatimTextOutput("summary")
@@ -444,49 +445,50 @@ ui <- dashboardPage(
                             textOutput("ordinatePrint"))
                  )),
 
-        tabPanel(title = "Split Ordination Plot",
-                 tabsetPanel(
-                   tabPanel(title = "Variables",
-                            box(
-                              title = "Variables",
-                              width = "2",
-                              collapsible = TRUE,
-                              collapsed = FALSE,
-                              selectInput(
-                                "xb2", "Sample variable:", choices = colnames("datasetMetadata"), selected = "bmi_group"
-                              ),
-
-                              selectInput(
-                                "zbsplit",
-                                "Taxonomy rank:",
-                                choices = c("Phylum", "Class", "Order", "Family", "Genus")
-                              ),
-
-                              selectInput(
-                                "ordinate.method2",
-                                "Ordination method:",
-                                choices = c("DCA", "CCA", "RDA", "CAP", "DPCoA", "NMDS", "MDS", "PCoA"),
-                                selected = "CCA"
-                              ),
-
-                              selectInput(
-                                "ordinate.distance2",
-                                "Distance:",
-                                choices = c("bray", "jaccard", "unifrac"),
-                                selected = "bray"
-                              ),
-
-                              sliderInput(
-                                "geom.size2",
-                                "Point size:",
-                                min = 1,
-                                max = 10,
-                                step = 0.5,
-                                value = "3"
-                              ),
-                              checkboxInput("transparentSplitOrd", "Transparent background", value = TRUE)
-                            )),
-                   tabPanel( title = "Plot", plotlyOutput("splitOrd")))),
+        # Split Ordination Plot tab - not happy with how it looks, commenting out for now
+        # tabPanel(title = "Split Ordination Plot",
+        #          tabsetPanel(
+        #            tabPanel(title = "Variables",
+        #                     box(
+        #                       title = "Variables",
+        #                       width = "2",
+        #                       collapsible = TRUE,
+        #                       collapsed = FALSE,
+        #                       selectInput(
+        #                         "xb2", "Sample variable:", choices = colnames("datasetMetadata"), selected = "bmi_group"
+        #                       ),
+        #
+        #                       selectInput(
+        #                         "zbsplit",
+        #                         "Taxonomy rank:",
+        #                         choices = c("Phylum", "Class", "Order", "Family", "Genus")
+        #                       ),
+        #
+        #                       selectInput(
+        #                         "ordinate.method2",
+        #                         "Ordination method:",
+        #                         choices = c("DCA", "CCA", "RDA", "CAP", "DPCoA", "NMDS", "MDS", "PCoA"),
+        #                         selected = "CCA"
+        #                       ),
+        #
+        #                       selectInput(
+        #                         "ordinate.distance2",
+        #                         "Distance:",
+        #                         choices = c("bray", "jaccard", "unifrac"),
+        #                         selected = "bray"
+        #                       ),
+        #
+        #                       sliderInput(
+        #                         "geom.size2",
+        #                         "Point size:",
+        #                         min = 1,
+        #                         max = 10,
+        #                         step = 0.5,
+        #                         value = "3"
+        #                       ),
+        #                       checkboxInput("transparentSplitOrd", "Transparent background", value = TRUE)
+        #                     )),
+        #            tabPanel( title = "Plot", plotlyOutput("splitOrd")))),
 
         tabPanel(title = "Taxa Plot",
                  tabsetPanel(

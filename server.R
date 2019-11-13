@@ -30,31 +30,31 @@ plot_ordered_bar<-function (physeq, x = "Sample",
   require(plyr)
   require(grid)
   bb <- psmelt(physeq)
-  
-  
+
+
   samp_names <- aggregate(bb$Abundance, by=list(bb$Sample), FUN=sum)[,1]
   .e <- environment()
   bb[,fill]<- factor(bb[,fill], rev(sort(unique(bb[,fill])))) #fill to genus
-  
-  
+
+
   bb<- bb[order(bb[,fill]),] # genus to fill
   p = ggplot(bb, aes_string(x = x, y = y,
                             fill = fill),
              environment = .e, ordered = FALSE)
-  
-  
+
+
   p = p +geom_bar(stat = "identity",
                   position = "stack",
                   color = "black")
-  
+
   p = p + theme(axis.text.x = element_text(angle = -90, hjust = 0))
-  
+
   p = p + guides(fill = guide_legend(override.aes = list(colour = NULL), reverse=TRUE)) +
     theme(legend.key = element_rect(colour = "black"))
-  
+
   p = p + theme(legend.key.size = unit(leg_size, "cm"))
-  
-  
+
+
   if (!is.null(title)) {
     p <- p + ggtitle(title)
   }
@@ -105,23 +105,23 @@ make_chunk_from_function_body <- function(fun, chunk.name="", chunk.options=list
 report.source <- reactive({
   req(sessionData$import.params(),
       sessionData$filter.params())
-  
+
   report <- readLines("sc_report_base.Rmd")
-  
+
   insert.function <- function(report, tag, fun, chunk.name = "", chunk.options = list()) {
     w <- which(report == tag)
     report[w] <- make_chunk_from_function_body(fun, chunk.name = chunk.name, chunk.options = chunk.options)
-    
+
     return(report)
   }
-  
+
   # Import
   report <- insert.function(report, "<!-- import.fun -->", sessionData$import.fun(), chunk.name = "import")
-  
+
   # Filter
   report <- insert.function(report, "<!-- filter.fun -->", sessionData$filter.fun(), chunk.name = "filter")
-  
-  
+
+
   return(report)
 })
 
@@ -230,7 +230,7 @@ server <- function(input, output, session) {
 
 
   ## Dataset Filtering ##
-  
+
   ## Populate SelectInput with taxonomic ranks ##
   observeEvent(input$datasetUpdate, {
     tryCatch({
@@ -240,31 +240,33 @@ server <- function(input, output, session) {
       simpleError(e)
     })
   }, ignoreNULL = FALSE)
-  
+
   ## Update Checkbox Group based on the chosen taxonomic rank ##
   observeEvent(input$subsetTaxaByRank, {
     tryCatch({
       updateCheckboxGroupInput(session, "subsetTaxaByRankTaxList",
                                choices = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]]),
-                               selected = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]])
+                               selected = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]]),
+                               inline = TRUE
               )
     }, error = function(e) {
       simpleError(e)
     })
   })
-  
+
   ## Update subsetSamples Checkbox Group ##
   observeEvent(input$datasetUpdate, {
     tryCatch({
       updateCheckboxGroupInput(session, "subsetSamples",
                                choices = colnames(otu_table(datasetChoice())),
-                               selected = colnames(otu_table(datasetChoice()))
+                               selected = colnames(otu_table(datasetChoice())),
+                               inline = TRUE
                 )
       }, error = function(e) {
         simpleError(e)
       })
   })
-  
+
   ## Table generation functions ##
   prevalenceAbsolute <- reactive({
     a <- as.data.frame(prevalence(compositionalInput(), detection = input$detectionPrevalence2/100, sort = TRUE, count = TRUE))
@@ -276,7 +278,7 @@ server <- function(input, output, session) {
     names(a) <- c("Prevalence (relative)")
     return(a)
   })
-  
+
   ## Function to apply filters to the dataset ##
   filterData <- reactive({
     physeq <- datasetChoice()
@@ -343,7 +345,7 @@ server <- function(input, output, session) {
   )
 
   ## Core Microbiota ##
-  
+
   coreHeatmapParams <- reactive({
     # Core with compositionals:
     detections <- 10^seq(log10(as.numeric(input$detectionMin)), log10(1), length = 10)
@@ -632,7 +634,13 @@ server <- function(input, output, session) {
   })
 
   ordinatePlotParams <- reactive({
-    p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = input$yb ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+    if (ncol(sample_data(datasetInput())) > 1){
+      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = input$yb ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+    } else {
+      a <- datasetInput()
+      sample_data(a)[,2] <- sample_data(a)[,1]
+      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = input$yb ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+    }
     if(input$transparentOrdinatePlot){
       p <- p +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
@@ -644,26 +652,41 @@ server <- function(input, output, session) {
     ordinatePlotParams()
   })
 
-  splitOrdParams <- reactive({
-    splitOrdplot <-
-      plot_ordination(
-        datasetInput(),
-        ordinateDataSplit(),
-        type = "split",
-        shape = input$xb,
-        #color = input$yb,
-        color = input$zbsplit
-      ) + geom_point(size = input$geom.size2) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
-    if(input$transparentSplitOrd){
-      splitOrdplot <- splitOrdplot +
-        theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
-    }
-    ggplotly(splitOrdplot, height = 500, width = 1050)
-  })
-
-  output$splitOrd <- renderPlotly({
-    splitOrdParams()
-  })
+  # Split plot - not happy with how it looks - commented out
+  # splitOrdParams <- reactive({
+  #   if (ncol(sample_data(datasetInput())) > 1){
+  #     splitOrdplot <-
+  #       plot_ordination(
+  #         datasetInput(),
+  #         ordinateDataSplit(),
+  #         type = "split",
+  #         shape = input$xb,
+  #         #color = input$yb,
+  #         color = input$zbsplit
+  #       ) + geom_point(size = input$geom.size2) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+  #   } else {
+  #     a <- datasetInput()
+  #     sample_data(a)[,2] <- sample_data(a)[,1]
+  #     splitOrdplot <-
+  #       plot_ordination(
+  #         a,
+  #         ordinateDataSplit(),
+  #         type = "split",
+  #         shape = input$xb,
+  #         #color = input$yb,
+  #         color = input$zbsplit
+  #       ) + geom_point(size = input$geom.size2) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+  #   }
+  #   if(input$transparentSplitOrd){
+  #     splitOrdplot <- splitOrdplot +
+  #       theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
+  #   }
+  #   ggplotly(splitOrdplot, height = 500, width = 1050)
+  # })
+  #
+  # output$splitOrd <- renderPlotly({
+  #   splitOrdParams()
+  # })
 
   taxaOrdParams <- reactive({
     taxaOrdplot <-
@@ -684,7 +707,7 @@ server <- function(input, output, session) {
   output$taxaOrd <- renderPlotly({
     taxaOrdParams()
   })
-  
+
   ###########################
   ## Statistical analysis ###
   ###########################
