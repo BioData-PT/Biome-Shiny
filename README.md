@@ -67,16 +67,6 @@ Ticking **Transparent background** will make the plot's background transparent.
 
 *Abundance plot: Relative abundance of phylum in samples, sorted by nationality*
 
-###### 5.2. Prevalence Plot
-It's also possible to produce a prevalence plot. As the name indicates, the plot analyzes the prevalence of taxa in the data set.
-The app takes the **Taxonomy** and **Transparent background** variables from the previous section to generate the prevalence plot. This time, the plot was generated at the Family taxonomic level.
-
-![](https://i.gyazo.com/0645202faf38cd5957db6051859aafce.png)
-
-*Prevalence Plot: Family prevalence in dataset*
-
-**NOTE: Due to limitations in the ggplot2 library, the prevalence plot will fail if there are more than 25 taxa in the chosen rank.**
-
 ##### 6. Alpha Diversity
 Alpha diversity refers to the diversity within a particular area, and is usually expressed by a species richness measure. Biome-shiny produces several tables and a richness plot to help illustrate species diversity in samples.
 ###### 6.1. Evenness Table
