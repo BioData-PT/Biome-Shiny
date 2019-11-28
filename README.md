@@ -1,6 +1,7 @@
 # Biome-shiny
 ##  A Shiny R app for microbiome visualization, built around the "microbiome" package
 
+## Warning: This description is outdated
 
 
 #### 1. Features
