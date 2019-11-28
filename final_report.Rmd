@@ -1,14 +1,24 @@
 ---
 title: "Biome-shiny HTML report"
-output: html_document
+output:  
+  html_document:
+    toc: true
+    number_sections: true
 runtime: shiny
 ---
 ```{r setup, include=FALSE}
+#Stuff I've got to do:
+#Floating ToC
+#Phylo summary of the dataset
+#The various functions
+#Code report (later)
 knitr::opts_chunk$set(echo = TRUE)
 library(shiny)
 library(shinydashboard)
+library(shinyBS)
 library(microbiome)
 library(phyloseq)
+library(rmarkdown)
 library(DT)
 library(ggplot2)
 library(plotly)
@@ -18,6 +28,9 @@ library(ggpubr)
 library(hrbrthemes)
 library(reshape2)
 library(vegan)
+library(biomformat)
+library(ggplotify)
+library(RColorBrewer)
 ```
 # Phyloseq File Summary
 

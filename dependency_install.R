@@ -16,7 +16,7 @@ package_check_and_install_bioconductor = function(packages = c("package1","packa
 
 package_check_and_install(c("shiny","shinydashboard","shinyBS","dplyr","knitr","rmarkdown","DT",
                             "ggplot2","ggpubr","hrbrthemes","ggplotify","RColorBrewer",
-                            "plotly","reshape2","vegan","abundant","BiocManager"))
+                            "plotly","heatmaply","reshape2","vegan","abundant","BiocManager"))
 
 #BioConductor install
 BiocManager::install()

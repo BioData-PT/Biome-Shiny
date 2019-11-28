@@ -9,6 +9,8 @@ library(rmarkdown)
 library(DT)
 library(ggplot2)
 library(plotly)
+library(heatmaply)
+#library(ComplexHeatmap)
 library(knitr)
 library(dplyr)
 library(ggpubr)
@@ -126,6 +128,47 @@ report.source <- reactive({
 
   return(report)
 })
+
+#New Microbiome update messed up the formatting on the Phyloseq summary.
+summarize_phyloseq_mod <- function(x){
+  {
+    ave <- minR <- maxR <- tR <- aR <- mR <- sR <- sR1 <- sR2 <- svar <- NULL
+    sam_var <- zno <- comp <- NULL
+    ave <- sum(sample_sums(x))/nsamples(x)
+    comp <- length(which(colSums(abundances(x)) > 1))
+    if (comp == 0) {
+      a <- paste0("Compositional = YES")
+    }
+    else {
+      a <- paste0("Compositional = NO")
+    }
+    minR <- paste0("Min. number of reads = ", min(sample_sums(x)))
+    maxR <- paste0("Max. number of reads = ", max(sample_sums(x)))
+    tR <- paste0("Total number of reads = ", sum(sample_sums(x)))
+    aR <- paste0("Average number of reads = ", ave)
+    mR <- paste0("Median number of reads = ", median(sample_sums(x)))
+    if (any(taxa_sums(x) <= 1) == TRUE) {
+      sR <- paste0("Any OTU sum to 1 or less? ", "YES")
+    }
+    else {
+      sR <- paste0("Any OTU sum to 1 or less? ", "NO")
+    }
+    zno <- paste0("Sparsity = ", length(which(abundances(x) == 
+                                                0))/length(abundances(x)))
+    sR1 <- paste0("Number of singletons = ", length(taxa_sums(x)[taxa_sums(x) <= 
+                                                                   1]))
+    sR2 <- paste0("Percent of OTUs that are singletons (i.e. exactly one read detected across all samples): ", 
+                  mean(taxa_sums(x) == 1) * 100)
+    svar <- paste0("Number of sample variables: ", ncol(meta(x)))
+    list(a,minR, maxR, tR, aR, mR, zno, sR, sR1, sR2, svar)
+  }
+}
+#Function to fix the formatting on the sample variables
+list_sample_variables <- function(x){
+  a<-colnames(sample_data(x))
+  as.list(a)
+}
+
 
 ####### END OF FUNCTIONS #######
 
@@ -247,47 +290,50 @@ ui <- dashboardPage(
     ),
 
     tabItem(tabName="dataprocessing",
-                     tabsetPanel(
-                       tabPanel("Variables",
-                                fluidRow(
-                                box(
-                                     title = "Fiter by abundance", collapsible = TRUE,
-                                     #numericInput("detectionPrevalence2", "Minimum Abundance:", min = 0.00, max = 100, value = 0, step = 1),
-                                     #bsTooltip("detectionPrevalence2", "Minimum abundance value of OTUs.", "right", options = list(container = "body")),
-                                     numericInput("prevalencePrevalence","Prevalence [0-1]:", min = 0, max = 1, value = 0.0, step = 0.05),
-                                     bsTooltip("prevalencePrevalence", "Ratio of OTU presence in samples. ", "right", options = list(container = "body")),
-                                     checkboxInput("coreFilterDataset", "Set as active dataset", value = FALSE)
-                                ),
-                                box(
-                                    title = "Prune and subset taxa",
-                                    checkboxInput("pruneTaxaCheck", "Keep the top taxa"),
-                                    conditionalPanel(
-                                      condition = "input.pruneTaxaCheck == 1",
-                                      numericInput("pruneTaxa", label = "Number of top taxa:", value = "10", min = "1")
-                                    ),
-                                    checkboxInput("subsetTaxaByRankCheck", "Subset taxa by taxonomy rank"),
-                                    conditionalPanel(
-                                      condition = "input.subsetTaxaByRankCheck == 1",
-                                      selectInput("subsetTaxaByRank", label = "Taxa rank:", choices = ""),
-                                      checkboxGroupInput("subsetTaxaByRankTaxList", label = "Taxa:", choices = "")
-                                    )
-                                ),
-                                box(
-                                    title = "Remove samples", collapsible = TRUE, collapsed = TRUE,
-                                    checkboxInput("subsetSamplesCheck", label = "Remove unchecked samples"),
-                                    checkboxGroupInput("subsetSamples", inline = TRUE, label = "Samples:", choices = "")
-                                )
-                       )),
-                       tabPanel("Absolute prevalence", dataTableOutput("prevalenceAbsoluteOutput"), downloadButton("downloadPrevalenceAbsolute")),
-                       tabPanel("Relative prevalence", dataTableOutput("prevalenceRelativeOutput"), downloadButton("downloadPrevalenceRelative"))#,
+            #tabsetPanel(
+            #tabPanel("Variables",
+            fluidRow(
+              tabBox(
+                title = "Data filtering", width = 10,
+                tabPanel( "Top taxa",
+                          checkboxInput("pruneTaxaCheck", "Remove non-top taxa"),
+                          numericInput("pruneTaxa", label = "Number of top taxa:", value = "10", min = "1")
+                ),
+                tabPanel( "Subset taxa",
+                          checkboxInput("subsetTaxaByRankCheck", "Subset taxa by taxonomy rank"),
+                          actionButton("subsetTaxaByRankUntickAll", "Uncheck all taxa"),
+                          actionButton("subsetTaxaByRankTickAll", "Check all taxa"),
+                          selectInput("subsetTaxaByRank", label = "Taxa rank:", choices = ""),
+                          checkboxGroupInput("subsetTaxaByRankTaxList", inline = TRUE, label = "Taxa:", choices = "")
+                ),
+                tabPanel(
+                  title = "Remove samples",
+                  actionButton("subsetSamplesUntickAll", "Uncheck all samples"),
+                  actionButton("subsetSamplesTickAll", "Check all samples"),
+                  checkboxInput("subsetSamplesCheck", label = "Remove unchecked samples"),
+                  checkboxGroupInput("subsetSamples", inline = TRUE, label = "Samples:", choices = "")
+                )),
+              box(
+                title = "Fiter by prevalence", collapsible = TRUE, width = 2,
+                #numericInput("detectionPrevalence2", "Minimum Abundance:", min = 0.00, max = 100, value = 0, step = 1),
+                #bsTooltip("detectionPrevalence2", "Minimum abundance value of OTUs.", "right", options = list(container = "body")),
+                numericInput("prevalencePrevalence","Prevalence [0-1]:", min = 0, max = 1, value = 0.0, step = 0.05),
+                bsTooltip("prevalencePrevalence", "Ratio of OTU presence in samples. ", "up", options = list(container = "body")),
+                checkboxInput("coreFilterDataset", "Set as active dataset", value = FALSE)
+              )
+            )),
+                      #tabPanel("Absolute prevalence", dataTableOutput("prevalenceAbsoluteOutput"), downloadButton("downloadPrevalenceAbsolute")),
+                       #tabPanel("Relative prevalence", dataTableOutput("prevalenceRelativeOutput"), downloadButton("downloadPrevalenceRelative"))#,
                        #tabPanel("Summary", verbatimTextOutput("corePhyloSummary")),
                        #tabPanel("Taxa", verbatimTextOutput("coreTaxa"))
-                     )
-    ),
+                     #)
+    #),
 
     tabItem(tabName = "phyloseqsummary",
             h1("Phyloseq Summary"),
-            verbatimTextOutput("summary")
+            verbatimTextOutput("summary"),
+            paste0("Sample variables:"),
+            verbatimTextOutput("sampleVars")
     ),
 
 
@@ -295,12 +341,12 @@ ui <- dashboardPage(
     tabItem(
       tabName = "coremicrobiota",
           fixedRow(
-              box( width = "2", collapsible = TRUE,
-                   textInput("detectionMin", label = "Minimum detection threshold (Relative Abundance)", value = "0.0000001"),
-                   bsTooltip("detectionMin", "Lowest detection value on the heatmap. Value must be higher than 0.", "left", options = list(container = "body")),
-                   checkboxInput("transparentCoreHeatmap", "Transparent background", value = TRUE)
-              ),
-                   box(width = 10, div(style = 'overflow-x: scroll', plotlyOutput("coreHeatmap", width = "100%", height = "100%")))
+          #     box( width = "2", collapsible = TRUE,
+          #          textInput("detectionMin", label = "Minimum detection threshold (Relative Abundance)", value = "0.0000001"),
+          #          bsTooltip("detectionMin", "Lowest detection value on the heatmap. Value must be higher than 0.", "left", options = list(container = "body")),
+          #          checkboxInput("transparentCoreHeatmap", "Transparent background", value = TRUE)
+          #     ),
+                   plotlyOutput("coreHeatmap", height = 600, width = 1060)
             )
         ),
 
@@ -308,8 +354,8 @@ ui <- dashboardPage(
     tabItem(
       tabName = "communitycomposition",
       tabsetPanel(
-        tabPanel(title = "Abundance in samples by taxa", #Absolute abundance/counts
-                 tabsetPanel(
+        #tabPanel(title = "Abundance in samples by taxa", #Absolute abundance/counts
+         #        tabsetPanel(
                    tabPanel("Variables",
                             box(
                               width = "2",
@@ -344,11 +390,11 @@ ui <- dashboardPage(
                    ),
                    tabPanel("Absolute Abundance Plot", div(style = 'overflow-x: scroll', plotlyOutput("communityPlot", height = "100%"))),
                    tabPanel("Relative Abundance Plot", div(style = 'overflow-x: scroll', plotlyOutput("communityPlotGenus", height = "100%")))
-                 )
-        ),
-        tabPanel(title = "Taxonomy Prevalence Plot",
-                 plotlyOutput("communityPrevalence", height = "100%")
-        )
+        #         )
+        #),
+        #tabPanel(title = "Taxonomy Prevalence Plot",
+        #         plotlyOutput("communityPrevalence", height = "100%")
+        #)
       )
     ),
 
@@ -648,11 +694,7 @@ ui <- dashboardPage(
                      tabPanel(title = "Variables",
                               box( title = "Variables", width= "2", collapsible = TRUE,
                                    selectInput("permanovaPlotTypeNet", "Network Plot Type:", c("samples", "taxa"), selected = "samples"),
-                                   selectInput("permanovaDistanceMethodNet","Distance method (not required by all ordination methods):", choices = c("bray","jacard","unifrac"), selected = "bray"),
-                                   selectInput("permanovaMethodNet","Ordination method:",
-                                               choices = c("DCA", "CCA", "RDA", "CAP", "DPCoA", "NMDS", "MDS", "PCoA"),
-                                               selected = "CCA"),
-                                   numericInput("permanovaPermutationsNet", "Number of permutations:", min = 1, step = 1, value = 99),
+                                   selectInput("permanovaDistanceMethodNet","Distance method:", choices = c("bray","jacard","unifrac"), selected = "bray"),
                                    checkboxInput("transparentPermanova", "Transparent background", value = TRUE),
                                    conditionalPanel(condition = "input.permanovaPlotTypeNet == 'samples'",
                                       selectInput("permanovaMetadataNet", "Sample variable to cluster data samples:", c("Update")),
@@ -705,13 +747,7 @@ ui <- dashboardPage(
                           radioButtons("renderFactorPlot", "Render top factors barplot", choices = c("Yes","No")),
                           radioButtons("renderNetworkMap", "Render network map", choices = c("Yes","No"))
                         )
-               )#,
-               # tabPanel("TEST",
-               #          box(
-               #            textInput("projectName", "Name your project", value = "Report1"),
-               #            actionButton("fullDownloadTest", "Download Full Report")
-               #          )
-               #        )
+               )
              ),
              fluidRow(
                box( radioButtons('format', 'Document format (HTML only for now)', c('HTML'), inline = TRUE, selected = 'HTML'),

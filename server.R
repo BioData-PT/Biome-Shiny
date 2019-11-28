@@ -9,6 +9,8 @@ library(rmarkdown)
 library(DT)
 library(ggplot2)
 library(plotly)
+library(heatmaply)
+#library(ComplexHeatmap)
 library(knitr)
 library(dplyr)
 library(ggpubr)
@@ -132,6 +134,47 @@ collect_content <- function(){
 }
 
 
+#New Microbiome update messed up the formatting on the Phyloseq summary.
+summarize_phyloseq_mod <- function(x){
+  {
+    ave <- minR <- maxR <- tR <- aR <- mR <- sR <- sR1 <- sR2 <- svar <- NULL
+    sam_var <- zno <- comp <- NULL
+    ave <- sum(sample_sums(x))/nsamples(x)
+    comp <- length(which(colSums(abundances(x)) > 1))
+    if (comp == 0) {
+      a <- paste0("Compositional = YES")
+    }
+    else {
+      a <- paste0("Compositional = NO")
+    }
+    minR <- paste0("Min. number of reads = ", min(sample_sums(x)))
+    maxR <- paste0("Max. number of reads = ", max(sample_sums(x)))
+    tR <- paste0("Total number of reads = ", sum(sample_sums(x)))
+    aR <- paste0("Average number of reads = ", ave)
+    mR <- paste0("Median number of reads = ", median(sample_sums(x)))
+    if (any(taxa_sums(x) <= 1) == TRUE) {
+      sR <- paste0("Any OTU sum to 1 or less? ", "YES")
+    }
+    else {
+      sR <- paste0("Any OTU sum to 1 or less? ", "NO")
+    }
+    zno <- paste0("Sparsity = ", length(which(abundances(x) == 
+                                                0))/length(abundances(x)))
+    sR1 <- paste0("Number of singletons = ", length(taxa_sums(x)[taxa_sums(x) <= 
+                                                                   1]))
+    sR2 <- paste0("Percent of OTUs that are singletons (i.e. exactly one read detected across all samples): ", 
+                  mean(taxa_sums(x) == 1) * 100)
+    svar <- paste0("Number of sample variables: ", ncol(meta(x)))
+    list(a,minR, maxR, tR, aR, mR, zno, sR, sR1, sR2, svar)
+  }
+}
+#Function to fix the formatting on the sample variables
+list_sample_variables <- function(x){
+  a<-colnames(sample_data(x))
+  as.list(a)
+}
+
+
 # Load sample datasets #
 data("dietswap")
 data("atlas1006")
@@ -227,33 +270,31 @@ server <- function(input, output, session) {
     }
     return(dataset)
   })
-
-
+  
   ## Dataset Filtering ##
-
+  
   ## Populate SelectInput with taxonomic ranks ##
   observeEvent(input$datasetUpdate, {
     tryCatch({
       updateSelectInput(session, "subsetTaxaByRank",
-                               choices = colnames(tax_table(datasetInput())))
+                        choices = colnames(tax_table(datasetInput())))
     }, error = function(e) {
       simpleError(e)
     })
   }, ignoreNULL = FALSE)
-
+  
   ## Update Checkbox Group based on the chosen taxonomic rank ##
   observeEvent(input$subsetTaxaByRank, {
     tryCatch({
       updateCheckboxGroupInput(session, "subsetTaxaByRankTaxList",
-                               choices = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]]),
-                               selected = levels(data.frame(tax_table(datasetInput()))[[input$subsetTaxaByRank]]),
+                               choices = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
+                               selected = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
                                inline = TRUE
-              )
+      )
     }, error = function(e) {
       simpleError(e)
     })
   })
-
   ## Update subsetSamples Checkbox Group ##
   observeEvent(input$datasetUpdate, {
     tryCatch({
@@ -261,12 +302,71 @@ server <- function(input, output, session) {
                                choices = colnames(otu_table(datasetChoice())),
                                selected = colnames(otu_table(datasetChoice())),
                                inline = TRUE
-                )
-      }, error = function(e) {
-        simpleError(e)
-      })
+      )
+    }, error = function(e) {
+      simpleError(e)
+    })
   })
-
+  
+  #Chceck all samples
+  observeEvent(input$subsetSamplesTickAll, {
+    tryCatch({
+      updateCheckboxGroupInput(session, "subsetSamples",
+                               choices = colnames(otu_table(datasetChoice())),
+                               selected = colnames(otu_table(datasetChoice())),
+                               inline = TRUE
+      )
+    }, error = function(e) {
+      simpleError(e)
+    })
+  })
+  
+  #Check all taxa
+  observeEvent(input$subsetTaxaByRankTickAll, {
+    tryCatch({
+      updateCheckboxGroupInput(
+        session, "subsetTaxaByRankTaxList",
+        choices = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
+        selected = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
+        inline = TRUE
+      )
+    }, error = function(e) {
+      simpleError(e)
+    }
+    )
+  })
+  
+  
+  #Uncheck all taxa
+  observeEvent(input$subsetTaxaByRankUntickAll, {
+    tryCatch({
+      updateCheckboxGroupInput(
+        session, "subsetTaxaByRankTaxList",
+        choices = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
+        selected = NULL,
+        inline = TRUE
+      )
+    }, error = function(e) {
+      simpleError(e)
+    }
+    )
+  })
+  
+  #Uncheck all samples
+  observeEvent(input$subsetSamplesUntickAll, {
+    tryCatch({
+      updateCheckboxGroupInput(
+        session, "subsetSamples",
+        choices = colnames(otu_table(datasetChoice())),
+        selected = NULL,
+        inline = TRUE
+      )
+    }, error = function(e) {
+      simpleError(e)
+    }
+    )
+  })
+  
   ## Table generation functions ##
   prevalenceAbsolute <- reactive({
     a <- as.data.frame(prevalence(compositionalInput(), detection = input$detectionPrevalence2/100, sort = TRUE, count = TRUE))
@@ -278,7 +378,7 @@ server <- function(input, output, session) {
     names(a) <- c("Prevalence (relative)")
     return(a)
   })
-
+  
   ## Function to apply filters to the dataset ##
   filterData <- reactive({
     physeq <- datasetChoice()
@@ -296,11 +396,12 @@ server <- function(input, output, session) {
       tax_table(physeq) <- tax_table(newMA)
       # }
     }
-    # Filter top X taxa
+    #Filter out non-top taxa
     if (input$pruneTaxaCheck == TRUE){
-      filterTaxa <- names(sort(taxa_sums(a), decreasing = TRUE)[1:input$pruneTaxa])
+      filterTaxa <- names(sort(taxa_sums(physeq), decreasing = TRUE)[1:input$pruneTaxa])
       physeq <- prune_taxa(filterTaxa, physeq)
     }
+    #Filter out samples
     if (input$subsetSamplesCheck == TRUE){
       oldDF <- as(sample_data(physeq), "data.frame")
       newDF <- subset(oldDF, colnames(otu_table(physeq)) %in% input$subsetSamples)
@@ -346,20 +447,49 @@ server <- function(input, output, session) {
 
   ## Core Microbiota ##
 
+  # coreHeatmapParams <- reactive({
+  #   # Core with compositionals:
+  #   detections <- 10^seq(log10(as.numeric(input$detectionMin)), log10(1), length = 10)
+  #   gray <- rev(brewer.pal(5,"Spectral"))
+  #   coreplot <- plot_core(compositionalInput(), plot.type = "heatmap", colours = gray, prevalences = 0, detections = detections) + xlab("Detection Threshold (Relative Abundance)")
+  #   if(input$transparentCoreHeatmap == TRUE){
+  #     coreplot <- coreplot +
+  #       theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
+  #   }
+  #
+  #   ggplotly(coreplot, height = plot_width(compositionalInput(), mult = 10, otu.or.tax = "tax"), width = 900 )
+  # })
   coreHeatmapParams <- reactive({
-    # Core with compositionals:
-    detections <- 10^seq(log10(as.numeric(input$detectionMin)), log10(1), length = 10)
-    gray <- rev(brewer.pal(5,"Spectral"))
-    coreplot <- plot_core(compositionalInput(), plot.type = "heatmap", colours = gray, prevalences = 0, detections = detections) + xlab("Detection Threshold (Relative Abundance)")
-    if(input$transparentCoreHeatmap == TRUE){
-      coreplot <- coreplot +
-        theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
+    if ( input$samplesAreColumns == TRUE ) {
+      if ( nrow(otu_table(datasetInput())) > 1000 ){
+        simpleError("A maximum of 1000 OTUs are permitted. Please filter the dataset and try again.")
+      } else {
+        b <- heatmaply(otu_table(datasetInput()),
+                       key.title = "Abundance", plot_method = "ggplot",
+                       heatmap_layers = theme(
+                         panel.background = element_rect(fill = "transparent"),
+                         plot.background = element_rect(fill = "transparent"),
+                         legend.background = element_rect(fill = "transparent")
+                       )
+        )      }
+    } else {
+      if (ncol(otu_table(datasetInput())) > 1000){
+        simpleError("A maximum of 1000 OTUs are permitted. Please filter the dataset and try again.")
+      } else {
+        b <- heatmaply(otu_table(datasetInput()),
+                       key.title = "Abundance", plot_method = "ggplot",
+                       heatmap_layers = theme(
+                         panel.background = element_rect(fill = "transparent"),
+                         plot.background = element_rect(fill = "transparent"),
+                         legend.background = element_rect(fill = "transparent")
+                    )
+            )
+      }
     }
-
-    ggplotly(coreplot, height = plot_width(compositionalInput(), mult = 10, otu.or.tax = "tax"), width = 900 )
+    return(b)
   })
   output$coreHeatmap <- renderPlotly({
-    coreHeatmapParams()
+    ggplotly(coreHeatmapParams(), height = 1060, width = 1060)
   })
 
   ## Community Composition ##
@@ -400,7 +530,7 @@ server <- function(input, output, session) {
   })
 
   # Abundance of taxa in sample variable by taxa
-  communityPlotParams <- reactive ({ #Filtering the data seems to produce some strange results. The filtering appears to work fine though.
+  communityPlotParams <- reactive ({
     if(input$communityPlotFacetWrap == FALSE){
       compositionplot <- plot_ordered_bar(datasetInput(), x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
     } else {
@@ -459,13 +589,21 @@ server <- function(input, output, session) {
   # Phyloseq Summary #
   summaryParams <- reactive({
     req(datasetInput())
-    summarize_phyloseq(datasetInput())
+    as.character(summarize_phyloseq_mod(datasetInput()))
   })
-
+  
   output$summary <- renderPrint({
     summaryParams()
   })
-
+  
+  sampleVarsParams <- reactive({
+    list_sample_variables(datasetInput())
+  })
+  
+  output$sampleVars <- renderPrint({
+    as.character(sampleVarsParams())  
+  })
+  
   ## Alpha Diversity ##
 
   #Abundance and Evenness tables#
@@ -800,12 +938,15 @@ server <- function(input, output, session) {
 
   netPlotParams <- reactive({
     if(input$permanovaPlotTypeNet == "samples"){
-      n <- make_network(compositionalInput(), type = "samples", distance = input$permanovaDistanceMethodNet)
-      p <- plot_network(n, compositionalInput(), type = "samples", shape = input$permanovaMetaShapeNet, color = input$permanovaMetadataNet )
+      n <- make_network(compositionalInput(), type = "samples", distance = input$permanovaDistanceMethodNet, max.dist = 0.2)
+      p <- plot_network(n, compositionalInput(), type = "samples", shape = input$permanovaMetaShapeNet, color = input$permanovaMetadataNet, line_weight = 0.4)
     }
     if(input$permanovaPlotTypeNet == "taxa"){
-      n <- make_network(compositionalInput(), type = "taxa", distance = input$permanovaDistanceMethodNet)
-      p <- plot_network(n, compositionalInput(), type = "taxa", color= ntaxa(otu_table(compositionalInput())))
+      #n <- make_network(compositionalInput(), type = "taxa", distance = input$permanovaDistanceMethodNet)
+      #p <- plot_network(n, compositionalInput(), type = "taxa", color= ntaxa(otu_table(datasetInput())))
+      data <- subset_samples(compositionalInput(), !is.na(colnames(otu_table(compositionalInput()))))
+      p <- plot_net(data, color = input$permanovaMetadataNet, shape = input$permanovaMetaShapeNet )
+      
     }
     if(input$transparentPermanova == TRUE){
       p <- p + theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
