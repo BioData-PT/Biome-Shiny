@@ -1,4 +1,4 @@
-# Biome-shiny 0.8 - UI
+# Biome-shiny 0.9 - UI
 
 library(shiny)
 library(shinydashboard)
@@ -12,6 +12,7 @@ library(plotly)
 library(heatmaply)
 #library(ComplexHeatmap)
 library(knitr)
+library(plyr)
 library(dplyr)
 library(ggpubr)
 library(hrbrthemes)
@@ -176,12 +177,12 @@ list_sample_variables <- function(x){
 # Load sample datasets #
 data("dietswap")
 data("atlas1006")
-data("peerj32")
-peerj32 <- peerj32$phyloseq
+#data("peerj32")
+#peerj32 <- peerj32$phyloseq
 
 # UI
 ui <- dashboardPage(
-  dashboardHeader(title = "Biome-shiny v0.8"),
+  dashboardHeader(title = "Biome-Shiny v0.9"),
   dashboardSidebar(
     sidebarMenu(
       br(),
@@ -275,7 +276,7 @@ ui <- dashboardPage(
           selectInput(
             "datasetSample",
             "Choose a sample dataset:",
-            choices = c("dietswap", "atlas1006", "peerj32")
+            choices = c("dietswap", "atlas1006")
           )
         ),
         actionButton("datasetUpdate", "Update Dataset"),
@@ -315,8 +316,6 @@ ui <- dashboardPage(
                 )),
               box(
                 title = "Fiter by prevalence", collapsible = TRUE, width = 2,
-                #numericInput("detectionPrevalence2", "Minimum Abundance:", min = 0.00, max = 100, value = 0, step = 1),
-                #bsTooltip("detectionPrevalence2", "Minimum abundance value of OTUs.", "right", options = list(container = "body")),
                 numericInput("prevalencePrevalence","Prevalence [0-1]:", min = 0, max = 1, value = 0.0, step = 0.05),
                 bsTooltip("prevalencePrevalence", "Ratio of OTU presence in samples. ", "up", options = list(container = "body")),
                 checkboxInput("coreFilterDataset", "Set as active dataset", value = FALSE)
@@ -341,12 +340,7 @@ ui <- dashboardPage(
     tabItem(
       tabName = "coremicrobiota",
           fixedRow(
-          #     box( width = "2", collapsible = TRUE,
-          #          textInput("detectionMin", label = "Minimum detection threshold (Relative Abundance)", value = "0.0000001"),
-          #          bsTooltip("detectionMin", "Lowest detection value on the heatmap. Value must be higher than 0.", "left", options = list(container = "body")),
-          #          checkboxInput("transparentCoreHeatmap", "Transparent background", value = TRUE)
-          #     ),
-                   plotlyOutput("coreHeatmap", height = 600, width = 1060)
+                   plotlyOutput("coreHeatmap", height = 800, width = 1000)
             )
         ),
 
@@ -693,13 +687,13 @@ ui <- dashboardPage(
                    tabsetPanel(
                      tabPanel(title = "Variables",
                               box( title = "Variables", width= "2", collapsible = TRUE,
-                                   selectInput("permanovaPlotTypeNet", "Network Plot Type:", c("samples", "taxa"), selected = "samples"),
+                                   #selectInput("permanovaPlotTypeNet", "Network Plot Type:", c("samples", "taxa"), selected = "samples"),
                                    selectInput("permanovaDistanceMethodNet","Distance method:", choices = c("bray","jacard","unifrac"), selected = "bray"),
                                    checkboxInput("transparentPermanova", "Transparent background", value = TRUE),
-                                   conditionalPanel(condition = "input.permanovaPlotTypeNet == 'samples'",
+                                   #conditionalPanel(condition = "input.permanovaPlotTypeNet == 'samples'",
                                       selectInput("permanovaMetadataNet", "Sample variable to cluster data samples:", c("Update")),
                                       selectInput("permanovaMetaShapeNet", "Sample variable to set different point shapes:", c("Update"))
-                                    )
+                                    #)
                                   )
                               ),
                         tabPanel(title ="Plot",
@@ -711,46 +705,46 @@ ui <- dashboardPage(
         )
       ),
     tabItem( tabName = "results",
-             tabsetPanel(
-               tabPanel("Core Microbiota",
-                        box(
-                          radioButtons("renderPrevTables", "Render Prevalence Tables", choices = c("Yes", "No")),
-                          radioButtons("renderCoreTaxaSummary", "Render Core Taxa Summary", choices = c("Yes", "No")),
-                          radioButtons("renderCoreHeatmap", "Render Core Taxa Heatmap", choices = c("Yes", "No"))
-                        )
-               ),
-               tabPanel("Community Composition",
-                        box(
-                          radioButtons("renderSampleAbundancePlot", "Render Abundance in Samples Plot", choices = c("Yes", "No")),
-                          radioButtons("renderRelativeAbundancePlot", "Render Relative Abundance in Samples Plot", choices = c("Yes", "No")),
-                          radioButtons("renderPrevalencePlot", "Render Taxa Prevalence Plot", choices = c("Yes", "No"))
-                        )
-               ),
-               tabPanel("Alpha Diversity",
-                        box(
-                          radioButtons("renderRichness", "Render Richness Plot", choices = c("Yes", "No")),
-                          radioButtons("printTableAlpha", "Print Table Head", choices = c("Yes", "No"))
-                        )
-               ),
-               tabPanel("Beta Diversity",
-                        box(
-                          radioButtons("renderOrdplot", "Render Ordination Plot", choices = c("Yes", "No")),
-                          radioButtons("renderSplitOrdplot", "Render Split Ordination Plot", choices = c("Yes", "No")),
-                          radioButtons("renderTaxaplot", "Render Taxa Plot", choices = c("Yes", "No"))
-                        )
-               ),
-
-               tabPanel("PERMANOVA",
-                        box(
-                          radioButtons("renderDensityPlot", "Render density plot", choices = c("Yes","No")),
-                          radioButtons("renderPValueTables", "Render P-Value tables", choices = c("Yes","No")),
-                          radioButtons("renderFactorPlot", "Render top factors barplot", choices = c("Yes","No")),
-                          radioButtons("renderNetworkMap", "Render network map", choices = c("Yes","No"))
-                        )
-               )
-             ),
+             # tabsetPanel(
+             #   tabPanel("Core Microbiota",
+             #            box(
+             #              radioButtons("renderPrevTables", "Render Prevalence Tables", choices = c("Yes", "No")),
+             #              radioButtons("renderCoreTaxaSummary", "Render Core Taxa Summary", choices = c("Yes", "No")),
+             #              radioButtons("renderCoreHeatmap", "Render Core Taxa Heatmap", choices = c("Yes", "No"))
+             #            )
+             #   ),
+             #   tabPanel("Community Composition",
+             #            box(
+             #              radioButtons("renderSampleAbundancePlot", "Render Abundance in Samples Plot", choices = c("Yes", "No")),
+             #              radioButtons("renderRelativeAbundancePlot", "Render Relative Abundance in Samples Plot", choices = c("Yes", "No")),
+             #              radioButtons("renderPrevalencePlot", "Render Taxa Prevalence Plot", choices = c("Yes", "No"))
+             #            )
+             #   ),
+             #   tabPanel("Alpha Diversity",
+             #            box(
+             #              radioButtons("renderRichness", "Render Richness Plot", choices = c("Yes", "No")),
+             #              radioButtons("printTableAlpha", "Print Table Head", choices = c("Yes", "No"))
+             #            )
+             #   ),
+             #   tabPanel("Beta Diversity",
+             #            box(
+             #              radioButtons("renderOrdplot", "Render Ordination Plot", choices = c("Yes", "No")),
+             #              radioButtons("renderSplitOrdplot", "Render Split Ordination Plot", choices = c("Yes", "No")),
+             #              radioButtons("renderTaxaplot", "Render Taxa Plot", choices = c("Yes", "No"))
+             #            )
+             #   ),
+             # 
+             #   tabPanel("PERMANOVA",
+             #            box(
+             #              radioButtons("renderDensityPlot", "Render density plot", choices = c("Yes","No")),
+             #              radioButtons("renderPValueTables", "Render P-Value tables", choices = c("Yes","No")),
+             #              radioButtons("renderFactorPlot", "Render top factors barplot", choices = c("Yes","No")),
+             #              radioButtons("renderNetworkMap", "Render network map", choices = c("Yes","No"))
+             #            )
+             #   )
+             # ),
              fluidRow(
-               box( radioButtons('format', 'Document format (HTML only for now)', c('HTML'), inline = TRUE, selected = 'HTML'),
+               box( radioButtons('format', 'Download', c('HTML'), inline = TRUE, selected = 'HTML'),
                     downloadButton('downloadReportAlpha', label = "Download report")
                )
              )

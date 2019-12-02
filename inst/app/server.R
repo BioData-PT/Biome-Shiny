@@ -12,6 +12,7 @@ library(plotly)
 library(heatmaply)
 #library(ComplexHeatmap)
 library(knitr)
+library(plyr)
 library(dplyr)
 library(ggpubr)
 library(hrbrthemes)
@@ -447,25 +448,13 @@ server <- function(input, output, session) {
 
   ## Core Microbiota ##
 
-  # coreHeatmapParams <- reactive({
-  #   # Core with compositionals:
-  #   detections <- 10^seq(log10(as.numeric(input$detectionMin)), log10(1), length = 10)
-  #   gray <- rev(brewer.pal(5,"Spectral"))
-  #   coreplot <- plot_core(compositionalInput(), plot.type = "heatmap", colours = gray, prevalences = 0, detections = detections) + xlab("Detection Threshold (Relative Abundance)")
-  #   if(input$transparentCoreHeatmap == TRUE){
-  #     coreplot <- coreplot +
-  #       theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
-  #   }
-  #
-  #   ggplotly(coreplot, height = plot_width(compositionalInput(), mult = 10, otu.or.tax = "tax"), width = 900 )
-  # })
   coreHeatmapParams <- reactive({
     if ( input$samplesAreColumns == TRUE ) {
       if ( nrow(otu_table(datasetInput())) > 1000 ){
         simpleError("A maximum of 1000 OTUs are permitted. Please filter the dataset and try again.")
       } else {
         b <- heatmaply(otu_table(datasetInput()),
-                       key.title = "Abundance", plot_method = "ggplot",
+                       key.title = "Abundance", plot_method = "ggplot", height = 800, width = 1200,
                        heatmap_layers = theme(
                          panel.background = element_rect(fill = "transparent"),
                          plot.background = element_rect(fill = "transparent"),
@@ -489,7 +478,7 @@ server <- function(input, output, session) {
     return(b)
   })
   output$coreHeatmap <- renderPlotly({
-    ggplotly(coreHeatmapParams(), height = 1060, width = 1060)
+    ggplotly(coreHeatmapParams(), height = 800, width = 1280)
   })
 
   ## Community Composition ##
@@ -715,6 +704,7 @@ server <- function(input, output, session) {
     }
     richnessplot <- richnessplot + rremove("xlab") + rremove("ylab")
     p <- ggplotly(richnessplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = input$x2, automargin = TRUE), yaxis = list(title = paste("Alpha Diversity Measure (", input$richnessChoices , ")"), automargin = TRUE))
+    print(p)
   })
 
   output$richnessPlot <- renderPlotly({
@@ -937,17 +927,16 @@ server <- function(input, output, session) {
   })
 
   netPlotParams <- reactive({
-    if(input$permanovaPlotTypeNet == "samples"){
+    #if(input$permanovaPlotTypeNet == "samples"){
       n <- make_network(compositionalInput(), type = "samples", distance = input$permanovaDistanceMethodNet, max.dist = 0.2)
       p <- plot_network(n, compositionalInput(), type = "samples", shape = input$permanovaMetaShapeNet, color = input$permanovaMetadataNet, line_weight = 0.4)
-    }
-    if(input$permanovaPlotTypeNet == "taxa"){
-      #n <- make_network(compositionalInput(), type = "taxa", distance = input$permanovaDistanceMethodNet)
-      #p <- plot_network(n, compositionalInput(), type = "taxa", color= ntaxa(otu_table(datasetInput())))
-      data <- subset_samples(compositionalInput(), !is.na(colnames(otu_table(compositionalInput()))))
-      p <- plot_net(data, color = input$permanovaMetadataNet, shape = input$permanovaMetaShapeNet )
-      
-    }
+    #}
+    # if(input$permanovaPlotTypeNet == "taxa"){ 
+    #   n <- make_network(compositionalInput(), type = "taxa", distance = input$permanovaDistanceMethodNet)
+    #   p <- plot_network(n, compositionalInput(), type = "taxa", color= ntaxa(otu_table(datasetInput())))
+    #   data <- subset_samples(compositionalInput(), !is.na(colnames(otu_table(compositionalInput()))))
+    #   p <- plot_net(data, color = input$permanovaMetadataNet, shape = input$permanovaMetaShapeNet )
+    # }
     if(input$transparentPermanova == TRUE){
       p <- p + theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }

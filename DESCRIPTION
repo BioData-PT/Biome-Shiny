@@ -1,0 +1,16 @@
+Package: biomeshiny.package
+Type: Package
+Title: Biome-Shiny: GUI for Microbiome Visualization
+Version: 0.8.0
+Authors@R: person("Henrique", "Costa", email = "llanfair_gyll@protonmail.com", role = c("aut", "cre"))
+Description: A Shiny web application that functions as a visual interface for a variety of microbiome analysis and visualization functions.
+    It is primarily based on the phyloseq and microbiome libraries, and makes use of plotly to generate interactive plots from a ggplot2 output.
+    All tables and plots can be saved individually, albeit the final report function is currently incomplete and a work-in-progress.
+Depends: R (>= 3.5.1)
+License: GPLv3
+Encoding: UTF-8
+LazyData: true
+biocViews:
+Imports: shiny, shinydashboard, shinyBS, rmarkdown, DT, ggplot2, plotly, knitr, dplyr, ggpubr, hrbrthemes, reshape2, vegan, ggplotify, heatmaply, RColorBrewer, BiocManager, biomformat, phyloseq, microbiome
+
+    
