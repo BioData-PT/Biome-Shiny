@@ -456,7 +456,7 @@ ui <- dashboardPage(
                               collapsible = TRUE,
                               collapsed = FALSE,
                               selectInput(
-                                "xb", "Sample variable:", choices = colnames("datasetMetadata"), selected = "bmi_group"
+                                "xb", "Metadata:", choices = colnames("datasetMetadata"), selected = "bmi_group"
                               ),
                               selectInput(
                                 "ordinate.method",
