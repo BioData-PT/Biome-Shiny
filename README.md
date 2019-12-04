@@ -184,73 +184,73 @@ Alternatively, an HTML report can be downloaded by clicking ![](https://i.gyazo.
 
 ## Citations
    
-  Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan
+  *Winston Chang, Joe Cheng, JJ Allaire, Yihui Xie and Jonathan
   McPherson (2019). shiny: Web Application Framework for R. R
   package version 1.4.0. https://CRAN.R-project.org/package=shiny
 
-  Winston Chang and Barbara Borges Ribeiro (2018). shinydashboard:
+  *Winston Chang and Barbara Borges Ribeiro (2018). shinydashboard:
   Create Dashboards with 'Shiny'. R package version 0.7.1.
   https://CRAN.R-project.org/package=shinydashboard
   
-  Eric Bailey (2015). shinyBS: Twitter Bootstrap Components for
+  *Eric Bailey (2015). shinyBS: Twitter Bootstrap Components for
   Shiny. R package version 0.61.
   https://CRAN.R-project.org/package=shinyBS
 
-  Paul J. McMurdie and Joseph N Paulson (2019). biomformat: An
+  *Paul J. McMurdie and Joseph N Paulson (2019). biomformat: An
   interface package for the BIOM file format.
   https://github.com/joey711/biomformat/, http://biom-format.org/.
 
-  phyloseq: An R package for reproducible interactive analysis and
+  *phyloseq: An R package for reproducible interactive analysis and
   graphics of microbiome census data. Paul J. McMurdie and Susan
   Holmes (2013) PLoS ONE 8(4):e61217.
 
-  Leo Lahti et al.  microbiome R package.  URL:
+  *Leo Lahti et al.  microbiome R package.  URL:
   http://microbiome.github.io
   
-  JJ Allaire and Yihui Xie and Jonathan McPherson and Javier
+  *JJ Allaire and Yihui Xie and Jonathan McPherson and Javier
   Luraschi and Kevin Ushey and Aron Atkins and Hadley Wickham and
   Joe Cheng and Winston Chang and Richard Iannone (2019).
   rmarkdown: Dynamic Documents for R. R package version 1.18. URL
   https://rmarkdown.rstudio.com.
 
-  Yihui Xie, Joe Cheng and Xianying Tan (2019). DT: A Wrapper of
+  *Yihui Xie, Joe Cheng and Xianying Tan (2019). DT: A Wrapper of
   the JavaScript Library 'DataTables'. R package version 0.10.
   https://CRAN.R-project.org/package=DT
 
-  H. Wickham. ggplot2: Elegant Graphics for Data Analysis.
+  *H. Wickham. ggplot2: Elegant Graphics for Data Analysis.
   Springer-Verlag New York, 2016.
 
-  Alboukadel Kassambara (2019). ggpubr: 'ggplot2' Based
+  *Alboukadel Kassambara (2019). ggpubr: 'ggplot2' Based
   Publication Ready Plots. R package version 0.2.4.999.
   https://rpkgs.datanovia.com/ggpubr/
 
-  Carson Sievert (2018) plotly for R. https://plotly-r.com
+  *Carson Sievert (2018) plotly for R. https://plotly-r.com
 
-  Tal Galili, Alan O'Callaghan, Jonathan Sidi, Carson Sievert;
+  *Tal Galili, Alan O'Callaghan, Jonathan Sidi, Carson Sievert;
   heatmaply: an R package for creating interactive cluster
   heatmaps for online publishing, Bioinformatics, , btx657,
   https://doi.org/10.1093/bioinformatics/btx657
 
-  Hadley Wickham (2017). tidyverse: Easily Install and Load the
+  *Hadley Wickham (2017). tidyverse: Easily Install and Load the
   'Tidyverse'. R package version 1.2.1.
   https://CRAN.R-project.org/package=tidyverse
 
-  Bob Rudis (2019). hrbrthemes: Additional Themes, Theme
+  *Bob Rudis (2019). hrbrthemes: Additional Themes, Theme
   Components and Utilities for 'ggplot2'. R package version 0.6.0.
   https://CRAN.R-project.org/package=hrbrthemes
 
-  Hadley Wickham (2007). Reshaping Data with the reshape Package.
+  *Hadley Wickham (2007). Reshaping Data with the reshape Package.
   Journal of Statistical Software, 21(12), 1-20. URL
   http://www.jstatsoft.org/v21/i12/.
 
-  Jari Oksanen, F. Guillaume Blanchet, Michael Friendly, Roeland
+  *Jari Oksanen, F. Guillaume Blanchet, Michael Friendly, Roeland
   Kindt, Pierre Legendre, Dan McGlinn, Peter R. Minchin, R. B.
   O'Hara, Gavin L. Simpson, Peter Solymos, M. Henry H. Stevens,
   Eduard Szoecs and Helene Wagner (2019). vegan: Community Ecology
   Package. R package version 2.5-6.
   https://CRAN.R-project.org/package=vegan
 
-  Erich Neuwirth (2014). RColorBrewer: ColorBrewer Palettes. R
+  *Erich Neuwirth (2014). RColorBrewer: ColorBrewer Palettes. R
   package version 1.1-2.
   https://CRAN.R-project.org/package=RColorBrewer
 
