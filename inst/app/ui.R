@@ -412,10 +412,11 @@ ui <- dashboardPage(
                    )
                  )
         ),
-
-        # Alpha diversity measures with metadata
-        tabPanel(title = "Metadata Table with diversity measures",
-                 DT::dataTableOutput("view"), downloadButton("downloadMergedTable")),
+        tabPanel(title = "Assorted Diversity Measures",
+                 DT::dataTableOutput("diversityMeasuresTable"), downloadButton("downloadDiversityMeasuresTable")),
+        #  Metadata table
+        tabPanel(title = "Metadata Table",
+                 DT::dataTableOutput("metaTable"), downloadButton("downloadMetaTable")),
 
         # A phyloseq richness plot
         tabPanel(title = "Richness Plot",

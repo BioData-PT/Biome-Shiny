@@ -81,6 +81,18 @@ Abundance can be measured either by the absolute number of a given species in th
     datatable(head(as.data.frame(abundances(datasetInput(), transform = "compositional"), options = list(scrollX = TRUE))))
 ```
 
+### 4.4. Diversity Measures Table
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+    datatable(head(as.data.frame(alpha(datasetInput()), options = list(scrollX = TRUE))))
+```
+
+### 4.5. Metadata Table
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+    datatable(head(as.data.frame(sample_data(datasetInput()), options = list(scrollX = TRUE))))
+```
+
 ## 5. Beta Diversity
 
 Beta diversity is the index that measures diversity between samples.

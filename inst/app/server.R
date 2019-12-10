@@ -661,26 +661,39 @@ server <- function(input, output, session) {
 
 
   # Merged table - generate and output #
-  mergedTable <- reactive({
-    merge(meta(datasetInput()), alpha(datasetInput()), all.y = TRUE)
+  metaTableParams <- reactive({
+    datatable(sample_data(datasetInput()), options = list(scrollX = TRUE))
   })
-  viewParams <- reactive({
-    datatable(mergedTable(), options = list(scrollX = TRUE))
-  })
-
-  output$view <- DT::renderDataTable({
-    viewParams()
+  diversityMeasuresTableParams <- reactive({
+    datatable(alpha(datasetInput()), options = list(scrollX = TRUE))
   })
 
-  output$downloadMergedTable <- downloadHandler(
+  output$metaTable <- DT::renderDataTable({
+    metaTableParams()
+  })
+
+  output$downloadMetaTable <- downloadHandler(
     filename = function() {
-      paste("MetadataDiversityMeasureTable", ".csv", sep = "")
+      paste("MetadataTable", ".csv", sep = "")
     },
     content = function(file) {
-      write.csv(mergedTable(), file, row.names = TRUE)
+      write.csv(meta(datasetInput()), file, row.names = TRUE)
     }
   )
 
+  output$diversityMeasuresTable <- DT::renderDataTable({
+    diversityMeasuresTableParams()
+  })
+  
+  output$downloadDiversityMeasuresTable <- downloadHandler(
+    filename = function() {
+      paste("DiversityMeasuresTable", ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(meta(datasetInput()), file, row.names = TRUE)
+    }
+  )
+  
   # Alpha Diversity Richness Plot #
   richnessPlotParams <- reactive({
     if(input$richnessPlotGridWrap == FALSE){
