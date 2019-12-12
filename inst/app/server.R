@@ -242,6 +242,7 @@ server <- function(input, output, session) {
             }
             if(input$samplesAreColumns == FALSE){
               samples.out <- rownames(otu_table(a))
+              otu_table(a) <- phyloseq::t(otu_table(a))
             }
             subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
             samdf <- data.frame(Subject=subject)
