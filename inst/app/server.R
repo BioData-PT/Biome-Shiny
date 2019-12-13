@@ -1,4 +1,4 @@
-# Biome-shiny 0.8 - Server
+# Biome-shiny 0.9 - Server
 
 library(shiny)
 library(shinydashboard)
@@ -928,7 +928,7 @@ server <- function(input, output, session) {
     metadata <- input$permanovaColumnFac
     column <- meta[[metadata]]
     permanova <- adonis(t(otu) ~ column,
-                        data = meta, permutations = permnumber, method = "bray"
+                        data = meta, permutations = permnumber, method = input$permanovaDistanceMethodFac
     )
     coef <- coefficients(permanova)["column1",]
     top.coef <- coef[rev(order(abs(coef)))[1:20]] #top 20 coefficients

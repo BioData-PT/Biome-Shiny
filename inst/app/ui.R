@@ -673,7 +673,7 @@ ui <- dashboardPage(
                    tabsetPanel(
                      tabPanel(title = "Variables",
                               box( title = "Variables", width= "2", collapsible = TRUE,
-                                   selectInput("permanovaDistanceMethodFac","Distance method:", choices = c("bray","jacard","unifrac"), selected = "bray"),
+                                   selectInput("permanovaDistanceMethodFac","Dissimilarity index:", choices = c("manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis"), selected = "bray"),
                                    selectInput("permanovaColumnFac","Sample variable:", choices = colnames("datasetMetadata")),
                                    numericInput("permanovaPermutationsFac", "Number of permutations:", min = 1, step = 1, value = 99)#,
                                    # checkboxInput("transparentPermanovaTopfactors", "Transparent background", value = TRUE)
