@@ -204,28 +204,31 @@ server <- function(input, output, session) {
           })
       }
       if(input$datasetType == ".biom file with .csv metadata file"){ #Loads a .csv along with the .biom
-        req(input$dataset2)
-        req(input$datapathMetadata)
-        tryCatch({
-          datapath <- input$dataset2$datapath
-          a <- import_biom(datapath)
-        }, error = function(e){
-          simpleError("Error importing the .biom file.")
-        })
-
-        tryCatch({
-          datapathMetadata <- input$datasetMetadata$datapath
-          b <- sample_data(as.data.frame(read.csv(datapathMetadata, skipNul = TRUE)))
-        }, error = function(e){
-          simpleError("Error importing the .csv metadata file.")
-        })
-
-        tryCatch({
-          biomfile <- merge_phyloseq(a,b)
-          return(biomfile)
-        }, error = function(e){
-          simpleError("Error in merging .biom file with .csv metadata file.")
-        })
+        # req(input$dataset2)
+        #req(input$datapathMetadata)
+        
+        #tryCatch({
+        datapath <- input$dataset2$datapath
+        a <- import_biom(datapath)
+        #}, error = function(e){
+        simpleError("Error importing the .biom file.")
+        #})
+        
+        #tryCatch({
+        datapathMetadata <- input$datasetMetadata$datapath
+        b <- as.data.frame(read.csv(datapathMetadata, skipNul = TRUE))
+        rownames(b) <- b[, 1]
+        c <- sample_data(b)
+        #}, error = function(e){
+        simpleError("Error importing the .csv metadata file.")
+        #})
+        
+        # tryCatch({
+        biomfile <- merge_phyloseq(a,c)
+        return(biomfile)
+        #}, error = function(e){
+        # simpleError("Error in merging .biom file with .csv metadata file.")
+        #})
       }
 
       if(input$datasetType == ".biom file without .csv metadata file"){ #Loads a .biom file and generates sample metadata
@@ -599,7 +602,8 @@ server <- function(input, output, session) {
   #Abundance and Evenness tables#
 
   evennessParams <- reactive({
-    datatable(evenness(datasetInput()), options = list(scrollX = TRUE))
+    a <- datatable(evenness(datasetInput()), options = list(scrollX = TRUE))
+    colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
   })
 
   output$evennessTable <- renderDataTable({
@@ -661,12 +665,15 @@ server <- function(input, output, session) {
   }, ignoreNULL = FALSE)
 
 
-  # Merged table - generate and output #
+  # Metadata table#
   metaTableParams <- reactive({
     datatable(sample_data(datasetInput()), options = list(scrollX = TRUE))
   })
+  
+  #Diversity measures table
   diversityMeasuresTableParams <- reactive({
-    datatable(alpha(datasetInput()), options = list(scrollX = TRUE))
+    a <- alpha(datasetInput())
+    datatable(a, options = list(scrollX = TRUE))
   })
 
   output$metaTable <- DT::renderDataTable({
