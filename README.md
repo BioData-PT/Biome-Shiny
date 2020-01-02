@@ -8,7 +8,7 @@ Biome-Shiny is a graphical interface for visualizing microbiome data, primarily 
 
 Biome-Shiny has some dependencies outside of R that need to be installed before downloading the package. In Ubuntu:
 
-    sudo apt install libfontconfig1-dev libcairo2-dev
+    sudo apt install libfontconfig1-dev libcairo2-dev libcurl4-openssl-dev libssl-dev libxml2-dev
 
 Biome-Shiny is an R package, and can installed, along with its dependencies using devtools.
 
