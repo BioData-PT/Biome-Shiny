@@ -321,12 +321,7 @@ ui <- dashboardPage(
                 checkboxInput("coreFilterDataset", "Set as active dataset", value = FALSE)
               )
             )),
-                      #tabPanel("Absolute prevalence", dataTableOutput("prevalenceAbsoluteOutput"), downloadButton("downloadPrevalenceAbsolute")),
-                       #tabPanel("Relative prevalence", dataTableOutput("prevalenceRelativeOutput"), downloadButton("downloadPrevalenceRelative"))#,
-                       #tabPanel("Summary", verbatimTextOutput("corePhyloSummary")),
-                       #tabPanel("Taxa", verbatimTextOutput("coreTaxa"))
-                     #)
-    #),
+
 
     tabItem(tabName = "phyloseqsummary",
             h1("Phyloseq Summary"),
