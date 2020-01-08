@@ -684,7 +684,7 @@ ui <- dashboardPage(
                      tabPanel(title = "Variables",
                               box( title = "Variables", width= "2", collapsible = TRUE,
                                    #selectInput("permanovaPlotTypeNet", "Network Plot Type:", c("samples", "taxa"), selected = "samples"),
-                                   selectInput("permanovaDistanceMethodNet","Distance method:", choices = c("bray","jacard","unifrac"), selected = "bray"),
+                                   selectInput("permanovaDistanceMethodNet","Distance method:", choices = c("bray","jaccard","unifrac"), selected = "bray"),
                                    checkboxInput("transparentPermanova", "Transparent background", value = TRUE),
                                    #conditionalPanel(condition = "input.permanovaPlotTypeNet == 'samples'",
                                       selectInput("permanovaMetadataNet", "Sample variable to cluster data samples:", c("Update")),

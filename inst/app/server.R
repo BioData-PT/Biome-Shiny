@@ -602,8 +602,9 @@ server <- function(input, output, session) {
   #Abundance and Evenness tables#
 
   evennessParams <- reactive({
-    a <- datatable(evenness(datasetInput()), options = list(scrollX = TRUE))
+    a <- evenness(datasetInput())
     colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
+    a <- datatable(a, options = list(scrollX = TRUE))
   })
 
   output$evennessTable <- renderDataTable({
@@ -672,7 +673,8 @@ server <- function(input, output, session) {
   
   #Diversity measures table
   diversityMeasuresTableParams <- reactive({
-    a <- alpha(datasetInput())
+    a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher"))
+    colnames(a) <- c("Observed species", "Chao1", "Standard error (Chao1)", "ACE", "Standard error (ACE)", "Shannon's diversity index","Simpson's diversity index","Inverse Simpson","Fisher's alpha")
     datatable(a, options = list(scrollX = TRUE))
   })
 
