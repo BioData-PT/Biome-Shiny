@@ -410,7 +410,7 @@ ui <- dashboardPage(
                    )
                  )
         ),
-        tabPanel(title = "Assorted Diversity Measures",
+        tabPanel(title = "Richness Table",
                  DT::dataTableOutput("diversityMeasuresTable"), downloadButton("downloadDiversityMeasuresTable")),
         #  Metadata table
         tabPanel(title = "Metadata Table",
