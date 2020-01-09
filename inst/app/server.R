@@ -185,6 +185,12 @@ peerj32 <- peerj32$phyloseq
 # Server
 server <- function(input, output, session) {
   datasetChoice <- reactive({
+    a <- switch(
+      input$taxParseFunction,
+      "Default" = parse_taxonomy_default,
+      "QIIME" = parse_taxonomy_qiime,
+      "Greengenes" = parse_taxonomy_greengenes
+    )
     if (input$datasetChoice == "Use sample dataset") {
       switch(
         input$datasetSample,
@@ -197,7 +203,7 @@ server <- function(input, output, session) {
           req(input$dataset)
           tryCatch({
             datapath <- input$dataset$datapath
-            biomfile <- import_biom(datapath)
+            biomfile <- import_biom(datapath, parseFunction = a)
             return(biomfile)
           }, error = function(e){
             simpleError("Error importing the .biom file.")
@@ -209,7 +215,7 @@ server <- function(input, output, session) {
         
         #tryCatch({
         datapath <- input$dataset2$datapath
-        a <- import_biom(datapath)
+        a <- import_biom(datapath, parseFunction = a)
         #}, error = function(e){
         simpleError("Error importing the .biom file.")
         #})
@@ -235,7 +241,7 @@ server <- function(input, output, session) {
           req(input$dataset3)
           tryCatch({
             datapath <- input$dataset3$datapath
-            a <- import_biom(datapath)
+            a <- import_biom(datapath, parseFunction = a)
           }, error = function(e){
             simpleError("Error importing .biom file")
           })
@@ -602,9 +608,8 @@ server <- function(input, output, session) {
   #Abundance and Evenness tables#
 
   evennessParams <- reactive({
-    a <- evenness(datasetInput())
+    a <- datatable(evenness(datasetInput()), options = list(scrollX = TRUE))
     colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
-    a <- datatable(a, options = list(scrollX = TRUE))
   })
 
   output$evennessTable <- renderDataTable({
@@ -673,8 +678,7 @@ server <- function(input, output, session) {
   
   #Diversity measures table
   diversityMeasuresTableParams <- reactive({
-    a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher"))
-    colnames(a) <- c("Observed species", "Chao1", "Standard error (Chao1)", "ACE", "Standard error (ACE)", "Shannon's diversity index","Simpson's diversity index","Inverse Simpson","Fisher's alpha")
+    a <- alpha(datasetInput())
     datatable(a, options = list(scrollX = TRUE))
   })
 

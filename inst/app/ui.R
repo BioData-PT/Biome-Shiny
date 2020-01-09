@@ -237,39 +237,42 @@ ui <- dashboardPage(
           selected = "Upload dataset"
         ),
         conditionalPanel( condition = "input.datasetChoice == 'Upload dataset'",
-                          radioButtons("datasetType", "Select dataset characteristics:", c(".biom file including sample variables",".biom file with .csv metadata file",".biom file without .csv metadata file"))
-        ),
-        conditionalPanel(
-          condition = "input.datasetType == '.biom file including sample variables'",
-          fileInput(
-            "dataset",
-            "Dataset:",
-            multiple = FALSE,
-            accept = c(".biom"), placeholder="Phyloseq .biom files"
-          )
-        ),
-        conditionalPanel(
-          condition = "input.datasetType == '.biom file without .csv metadata file'",
-          fileInput(
-            "dataset3",
-            "Dataset:",
-            multiple = FALSE,
-            accept = c(".biom"), placeholder="Phyloseq .biom files"
-          ),
-          checkboxInput("samplesAreColumns","OTU Table: Samples are columns", value = TRUE)
-        ),
-        conditionalPanel(
-          condition = "input.datasetType == '.biom file with .csv metadata file'",
-          fileInput(
-            "dataset2",
-            "Dataset:",
-            multiple = FALSE,
-            accept = c(".biom"), placeholder="Phyloseq .biom files"
-          ),
-          fileInput("datasetMetadata", ".csv metadata file (sample variables):",
-                    multiple = FALSE,
-                    accept = c(".csv"), placeholder=".csv files"
-          )
+                          radioButtons("datasetType", "Select dataset characteristics:", c(".biom file including sample variables",".biom file with .csv metadata file",".biom file without .csv metadata file")),
+                          conditionalPanel(
+                            condition = "input.datasetType == '.biom file including sample variables'",
+                            fileInput(
+                              "dataset",
+                              "Dataset:",
+                              multiple = FALSE,
+                              accept = c(".biom"), placeholder="Phyloseq .biom files"
+                            )
+                          ),
+                          conditionalPanel(
+                            condition = "input.datasetType == '.biom file without .csv metadata file'",
+                            fileInput(
+                              "dataset3",
+                              "Dataset:",
+                              multiple = FALSE,
+                              accept = c(".biom"), placeholder="Phyloseq .biom files"
+                            ),
+                            checkboxInput("samplesAreColumns","OTU Table: Samples are columns", value = TRUE)
+                          ),
+                          conditionalPanel(
+                            condition = "input.datasetType == '.biom file with .csv metadata file'",
+                            fileInput(
+                              "dataset2",
+                              "Dataset:",
+                              multiple = FALSE,
+                              accept = c(".biom"), placeholder="Phyloseq .biom files"
+                            ),
+                            fileInput("datasetMetadata", ".csv metadata file (sample variables):",
+                                      multiple = FALSE,
+                                      accept = c(".csv"), placeholder=".csv files"
+                            )
+                          ),
+                          conditionalPanel( condition = "input.datasetChoice == 'Upload dataset'",
+                            selectInput("taxParseFunction",label = "Taxonomy parsing function", choices = c("Default","QIIME","Greengenes"), selected = "Default")      
+                          )
         ),
         conditionalPanel(
           condition = "input.datasetChoice == 'Use sample dataset'",
