@@ -748,11 +748,11 @@ server <- function(input, output, session) {
 
   ordinatePlotParams <- reactive({
     if (ncol(sample_data(datasetInput())) > 1){
-      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = colnames(otu_table(datasetInput())) ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = NULL ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     } else {
       a <- datasetInput()
       sample_data(a)[,2] <- sample_data(a)[,1]
-      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = colnames(otu_table(datasetInput())) ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = NULL ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     }
     if(input$transparentOrdinatePlot){
       p <- p +
