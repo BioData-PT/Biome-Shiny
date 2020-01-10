@@ -377,19 +377,7 @@ server <- function(input, output, session) {
     }
     )
   })
-  
-  ## Table generation functions ##
-  prevalenceAbsolute <- reactive({
-    a <- as.data.frame(prevalence(compositionalInput(), detection = input$detectionPrevalence2/100, sort = TRUE, count = TRUE))
-    names(a) <- c("Prevalence (counts)")
-    return(a)
-  })
-  prevalenceRelative <- reactive({
-    a <- as.data.frame(prevalence(compositionalInput(), detection = input$detectionPrevalence2/100, sort = TRUE))
-    names(a) <- c("Prevalence (relative)")
-    return(a)
-  })
-  
+
   ## Function to apply filters to the dataset ##
   filterData <- reactive({
     physeq <- datasetChoice()
@@ -398,14 +386,7 @@ server <- function(input, output, session) {
       oldMA <- tax_table(physeq)
       oldDF <- data.frame(oldMA)
       newMA <- prune_taxa(oldDF[[input$subsetTaxaByRank]] %in% input$subsetTaxaByRankTaxList, oldMA)
-      # newDF <- subset(oldDF, oldDF[[input$subsetTaxaByRank]] ==  input$subsetTaxaByRankTaxList )
-      # newMA <- as(newDF, "matrix")
-      # if (inherits(physeq, "taxonomyTable")) {
-      #   return(tax_table(newMA))
-      # }
-      # else {
       tax_table(physeq) <- tax_table(newMA)
-      # }
     }
     #Filter out non-top taxa
     if (input$pruneTaxaCheck == TRUE){
@@ -418,8 +399,6 @@ server <- function(input, output, session) {
       newDF <- subset(oldDF, colnames(otu_table(physeq)) %in% input$subsetSamples)
       sample_data(physeq) <- sample_data(newDF)
     }
-    #physeq <- filter_taxa(physeq, prune = TRUE, flist = filterfun(kOverA(A = input$detectionPrevalence2, k = 1)) )
-    physeq <- core(physeq, detection = 0, prevalence = input$prevalencePrevalence )
     return(physeq)
   })
 
@@ -530,10 +509,11 @@ server <- function(input, output, session) {
 
   # Abundance of taxa in sample variable by taxa
   communityPlotParams <- reactive ({
+    taxglom <- tax_glom(datasetInput(), taxrank=input$v4)
     if(input$communityPlotFacetWrap == FALSE){
-      compositionplot <- plot_ordered_bar(datasetInput(), x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
+      compositionplot <- plot_ordered_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
     } else {
-      compositionplot <- plot_ordered_bar(datasetInput(), x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + facet_grid(paste('~',input$z2), scales = "free", space = "free") + rremove("xlab") + rremove("ylab")
+      compositionplot <- plot_ordered_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + facet_grid(paste('~',input$z2), scales = "free", space = "free") + rremove("xlab") + rremove("ylab")
     }
     if(input$transparentCommunityPlot == TRUE){
       compositionplot <- compositionplot +
@@ -547,13 +527,14 @@ server <- function(input, output, session) {
   })
 
   communityPlotGenusParams <- reactive({
+    taxglom <- tax_glom(compositionalInput(), taxrank=input$v4)
     if(input$communityPlotFacetWrap == FALSE){
-      compositionplot <- plot_ordered_bar(compositionalInput(), x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
+      compositionplot <- plot_ordered_bar(taxglom, x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
         guides(fill = guide_legend(ncol = 1)) +
         scale_y_percent() +
         theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
     } else {
-      compositionplot <- plot_ordered_bar(compositionalInput(), x="Sample",  fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
+      compositionplot <- plot_ordered_bar(taxglom, x=input$z1,  fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
         guides(fill = guide_legend(ncol = 1)) +
         scale_y_percent() + facet_grid(paste('~',input$z2),scales = "free", space = "free") + rremove("xlab") + rremove("ylab")
     }
@@ -809,42 +790,6 @@ server <- function(input, output, session) {
     ordinatePlotParams()
   })
 
-  # Split plot - not happy with how it looks - commented out
-  # splitOrdParams <- reactive({
-  #   if (ncol(sample_data(datasetInput())) > 1){
-  #     splitOrdplot <-
-  #       plot_ordination(
-  #         datasetInput(),
-  #         ordinateDataSplit(),
-  #         type = "split",
-  #         shape = input$xb,
-  #         #color = input$yb,
-  #         color = input$zbsplit
-  #       ) + geom_point(size = input$geom.size2) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
-  #   } else {
-  #     a <- datasetInput()
-  #     sample_data(a)[,2] <- sample_data(a)[,1]
-  #     splitOrdplot <-
-  #       plot_ordination(
-  #         a,
-  #         ordinateDataSplit(),
-  #         type = "split",
-  #         shape = input$xb,
-  #         #color = input$yb,
-  #         color = input$zbsplit
-  #       ) + geom_point(size = input$geom.size2) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
-  #   }
-  #   if(input$transparentSplitOrd){
-  #     splitOrdplot <- splitOrdplot +
-  #       theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
-  #   }
-  #   ggplotly(splitOrdplot, height = 500, width = 1050)
-  # })
-  #
-  # output$splitOrd <- renderPlotly({
-  #   splitOrdParams()
-  # })
-
   taxaOrdParams <- reactive({
     taxaOrdplot <-
       plot_ordination(
@@ -956,16 +901,9 @@ server <- function(input, output, session) {
   })
 
   netPlotParams <- reactive({
-    #if(input$permanovaPlotTypeNet == "samples"){
       n <- make_network(compositionalInput(), type = "samples", distance = input$permanovaDistanceMethodNet, max.dist = 0.2)
       p <- plot_network(n, compositionalInput(), type = "samples", shape = input$permanovaMetaShapeNet, color = input$permanovaMetadataNet, line_weight = 0.4)
-    #}
-    # if(input$permanovaPlotTypeNet == "taxa"){ 
-    #   n <- make_network(compositionalInput(), type = "taxa", distance = input$permanovaDistanceMethodNet)
-    #   p <- plot_network(n, compositionalInput(), type = "taxa", color= ntaxa(otu_table(datasetInput())))
-    #   data <- subset_samples(compositionalInput(), !is.na(colnames(otu_table(compositionalInput()))))
-    #   p <- plot_net(data, color = input$permanovaMetadataNet, shape = input$permanovaMetaShapeNet )
-    # }
+
     if(input$transparentPermanova == TRUE){
       p <- p + theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
