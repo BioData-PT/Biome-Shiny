@@ -10,7 +10,6 @@ library(DT)
 library(ggplot2)
 library(plotly)
 library(heatmaply)
-#library(ComplexHeatmap)
 library(knitr)
 library(plyr)
 library(dplyr)
@@ -135,7 +134,7 @@ collect_content <- function(){
 }
 
 
-#New Microbiome update messed up the formatting on the Phyloseq summary.
+# Modified the summarize package 
 summarize_phyloseq_mod <- function(x){
   {
     ave <- minR <- maxR <- tR <- aR <- mR <- sR <- sR1 <- sR2 <- svar <- NULL
@@ -143,27 +142,27 @@ summarize_phyloseq_mod <- function(x){
     ave <- sum(sample_sums(x))/nsamples(x)
     comp <- length(which(colSums(abundances(x)) > 1))
     if (comp == 0) {
-      a <- paste0("Compositional = YES")
+      a <- paste0("Compositional? YES")
     }
     else {
-      a <- paste0("Compositional = NO")
+      a <- paste0("Compositional? NO")
     }
     minR <- paste0("Min. number of reads = ", min(sample_sums(x)))
     maxR <- paste0("Max. number of reads = ", max(sample_sums(x)))
     tR <- paste0("Total number of reads = ", sum(sample_sums(x)))
     aR <- paste0("Average number of reads = ", ave)
     mR <- paste0("Median number of reads = ", median(sample_sums(x)))
-    if (any(taxa_sums(x) <= 1) == TRUE) {
-      sR <- paste0("Any OTU sum to 1 or less? ", "YES")
+    if (any(taxa_sums(x) == 1) == TRUE) {
+      sR <- paste0("Singletons? ", "YES")
     }
     else {
-      sR <- paste0("Any OTU sum to 1 or less? ", "NO")
+      sR <- paste0("Singletons? ", "NO")
     }
     zno <- paste0("Sparsity = ", length(which(abundances(x) == 
                                                 0))/length(abundances(x)))
-    sR1 <- paste0("Number of singletons = ", length(taxa_sums(x)[taxa_sums(x) <= 
+    sR1 <- paste0("Number of singletons = ", length(taxa_sums(x)[taxa_sums(x) == 
                                                                    1]))
-    sR2 <- paste0("Percent of OTUs that are singletons (i.e. exactly one read detected across all samples): ", 
+    sR2 <- paste0("Percent of OTUs that are singletons = ", 
                   mean(taxa_sums(x) == 1) * 100)
     svar <- paste0("Number of sample variables: ", ncol(meta(x)))
     list(a,minR, maxR, tR, aR, mR, zno, sR, sR1, sR2, svar)
@@ -184,92 +183,69 @@ peerj32 <- peerj32$phyloseq
 
 # Server
 server <- function(input, output, session) {
+  
   datasetChoice <- reactive({
+    # Taxa Parse Function switch
     a <- switch(
       input$taxParseFunction,
       "Default" = parse_taxonomy_default,
       "QIIME" = parse_taxonomy_qiime,
       "Greengenes" = parse_taxonomy_greengenes
     )
+    
+    # Sample dataset selector
     if (input$datasetChoice == "Use sample dataset") {
       switch(
         input$datasetSample,
         "dietswap" = dietswap,
-        "atlas1006" = atlas1006,
-        "peerj32" = peerj32
+        "atlas1006" = atlas1006
       )
-    } else {
-      if(input$datasetType == ".biom file including sample variables") { #Simple .biom upload with sample_data() already set
-          req(input$dataset)
-          tryCatch({
-            datapath <- input$dataset$datapath
-            biomfile <- import_biom(datapath, parseFunction = a)
-            return(biomfile)
-          }, error = function(e){
-            simpleError("Error importing the .biom file.")
-          })
-      }
-      if(input$datasetType == ".biom file with .csv metadata file"){ #Loads a .csv along with the .biom
-        # req(input$dataset2)
-        #req(input$datapathMetadata)
-        
-        #tryCatch({
-        datapath <- input$dataset2$datapath
+    }
+    if(input$datasetChoice == "Upload dataset") {
+      req(input$dataset)
+      tryCatch({
+        datapath <- input$dataset$datapath
         a <- import_biom(datapath, parseFunction = a)
-        #}, error = function(e){
+      }, error = function(e){
         simpleError("Error importing the .biom file.")
-        #})
-        
-        #tryCatch({
+      })
+      if(input$datasetType == ".biom file including sample variables") {
+        return(a)
+      }
+      if(input$datasetType == ".biom file with .csv metadata file"){
         datapathMetadata <- input$datasetMetadata$datapath
         b <- as.data.frame(read.csv(datapathMetadata, skipNul = TRUE))
         rownames(b) <- b[, 1]
         c <- sample_data(b)
-        #}, error = function(e){
-        simpleError("Error importing the .csv metadata file.")
-        #})
-        
-        # tryCatch({
         biomfile <- merge_phyloseq(a,c)
         return(biomfile)
-        #}, error = function(e){
-        # simpleError("Error in merging .biom file with .csv metadata file.")
-        #})
       }
-
-      if(input$datasetType == ".biom file without .csv metadata file"){ #Loads a .biom file and generates sample metadata
-          req(input$dataset3)
-          tryCatch({
-            datapath <- input$dataset3$datapath
-            a <- import_biom(datapath, parseFunction = a)
-          }, error = function(e){
-            simpleError("Error importing .biom file")
-          })
-          tryCatch({
-            if(input$samplesAreColumns == TRUE){
-              samples.out <- colnames(otu_table(a))
-            }
-            if(input$samplesAreColumns == FALSE){
-              samples.out <- rownames(otu_table(a))
-              otu_table(a) <- phyloseq::t(otu_table(a))
-            }
-            subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
-            samdf <- data.frame(Subject=subject)
-            rownames(samdf) <- samples.out
-            b <- sample_data(samdf)
-          }, error = function(e){
-            simpleError("Error generating sample variables")
-          })
-          tryCatch({
-            biomfile <- merge_phyloseq(a, b)
-            return(biomfile)
-          }, error = function(e){
-            simpleError("Error merging sample variables with .biom file")
-          })
-        }
+      if(input$datasetType == ".biom file without .csv metadata file"){
+        tryCatch({
+          if(input$samplesAreColumns == TRUE){
+            samples.out <- colnames(otu_table(a))
+          }
+          if(input$samplesAreColumns == FALSE){
+            samples.out <- rownames(otu_table(a))
+            otu_table(a) <- phyloseq::t(otu_table(a))
+          }
+          subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
+          samdf <- data.frame(Subject=subject)
+          rownames(samdf) <- samples.out
+          b <- sample_data(samdf)
+        }, error = function(e){
+          simpleError("Error generating sample variables")
+        })
+        tryCatch({
+          biomfile <- merge_phyloseq(a, b)
+          return(biomfile)
+        }, error = function(e){
+          simpleError("Error merging sample variables with .biom file")
+        })
       }
     }
-  )
+    
+  })
 
   # New DatasetInput function works as an intermediary that checks if the dataset has been altered
   datasetInput <- reactive({
