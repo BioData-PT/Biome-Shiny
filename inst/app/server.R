@@ -178,15 +178,13 @@ list_sample_variables <- function(x){
 # Load sample datasets #
 data("dietswap")
 data("atlas1006")
-data("peerj32")
-peerj32 <- peerj32$phyloseq
 
 # Server
 server <- function(input, output, session) {
   
   datasetChoice <- reactive({
     # Taxa Parse Function switch
-    a <- switch(
+    taxparse <- switch(
       input$taxParseFunction,
       "Default" = parse_taxonomy_default,
       "QIIME" = parse_taxonomy_qiime,
@@ -195,17 +193,18 @@ server <- function(input, output, session) {
     
     # Sample dataset selector
     if (input$datasetChoice == "Use sample dataset") {
-      switch(
+      sampleDataset <- switch(
         input$datasetSample,
         "dietswap" = dietswap,
         "atlas1006" = atlas1006
       )
+      return(sampleDataset)
     }
     if(input$datasetChoice == "Upload dataset") {
       req(input$dataset)
       tryCatch({
         datapath <- input$dataset$datapath
-        a <- import_biom(datapath, parseFunction = a)
+        a <- import_biom(datapath, parseFunction = taxparse)
       }, error = function(e){
         simpleError("Error importing the .biom file.")
       })
@@ -749,11 +748,11 @@ server <- function(input, output, session) {
 
   ordinatePlotParams <- reactive({
     if (ncol(sample_data(datasetInput())) > 1){
-      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = input$yb ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = colnames(otu_table(datasetInput())) ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     } else {
       a <- datasetInput()
       sample_data(a)[,2] <- sample_data(a)[,1]
-      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = input$yb ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = colnames(otu_table(datasetInput())) ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     }
     if(input$transparentOrdinatePlot){
       p <- p +
