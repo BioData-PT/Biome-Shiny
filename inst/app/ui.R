@@ -186,7 +186,7 @@ ui <- dashboardPage(
         radioButtons(
           "datasetChoice",
           "Data Type",
-          c("Biom file", "Phyloseq files", "Sample dataset"),
+          c("Biom file", "Sample dataset"),
           selected = "Biom file"
         ),
         conditionalPanel( condition = "input.datasetChoice == 'Biom file'",
