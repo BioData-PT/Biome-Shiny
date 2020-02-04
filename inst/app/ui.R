@@ -53,39 +53,39 @@ plot_width <- function(data, mult = 12, min.width = 1060, otu.or.tax = "otu"){
   }
 }
 
-# Functions to dynamically generate chunks for the final report
-tidy_function_body <- function(fun) {
-  paste(tidy_source(text = as.character(body(fun))[-1])$text.tidy, collapse="\n")
-}
-
-make_chunk_from_function_body <- function(fun, chunk.name="", chunk.options=list()) {
-  opts <- paste(paste(names(chunk.options), chunk.options, sep="="), collapse=", ")
-  header <- paste0("```{r ", chunk.name, " ", chunk.options, "}")
-  paste(header, tidy_function_body(fun), "```", sep="\n")
-}
-
-report.source <- reactive({
-  req(sessionData$import.params(),
-      sessionData$filter.params())
-
-  report <- readLines("sc_report_base.Rmd")
-
-  insert.function <- function(report, tag, fun, chunk.name = "", chunk.options = list()) {
-    w <- which(report == tag)
-    report[w] <- make_chunk_from_function_body(fun, chunk.name = chunk.name, chunk.options = chunk.options)
-
-    return(report)
-  }
-
-  # Import
-  report <- insert.function(report, "<!-- import.fun -->", sessionData$import.fun(), chunk.name = "import")
-
-  # Filter
-  report <- insert.function(report, "<!-- filter.fun -->", sessionData$filter.fun(), chunk.name = "filter")
-
-
-  return(report)
-})
+# Functions to dynamically generate chunks for the final report - unused for now, commented out
+# tidy_function_body <- function(fun) {
+#   paste(tidy_source(text = as.character(body(fun))[-1])$text.tidy, collapse="\n")
+# }
+# 
+# make_chunk_from_function_body <- function(fun, chunk.name="", chunk.options=list()) {
+#   opts <- paste(paste(names(chunk.options), chunk.options, sep="="), collapse=", ")
+#   header <- paste0("```{r ", chunk.name, " ", chunk.options, "}")
+#   paste(header, tidy_function_body(fun), "```", sep="\n")
+# }
+# 
+# report.source <- reactive({
+#   req(sessionData$import.params(),
+#       sessionData$filter.params())
+# 
+#   report <- readLines("sc_report_base.Rmd")
+# 
+#   insert.function <- function(report, tag, fun, chunk.name = "", chunk.options = list()) {
+#     w <- which(report == tag)
+#     report[w] <- make_chunk_from_function_body(fun, chunk.name = chunk.name, chunk.options = chunk.options)
+# 
+#     return(report)
+#   }
+# 
+#   # Import
+#   report <- insert.function(report, "<!-- import.fun -->", sessionData$import.fun(), chunk.name = "import")
+# 
+#   # Filter
+#   report <- insert.function(report, "<!-- filter.fun -->", sessionData$filter.fun(), chunk.name = "filter")
+# 
+# 
+#   return(report)
+# })
 
 #New Microbiome update messed up the formatting on the Phyloseq summary.
 summarize_phyloseq_mod <- function(x){
@@ -137,7 +137,10 @@ data("atlas1006")
 
 # UI
 ui <- dashboardPage(
-  dashboardHeader(title = "Biome-Shiny v0.9"
+  dashboardHeader(title = "Biome-Shiny v0.9",  dropdownMenu( headerText = strong("Biome-Shiny settings"),
+                                                            uiOutput("decimalSlider"), 
+                                                            uiOutput("standardizationPick"), 
+                                                            icon = icon("cog", lib = "glyphicon"))
   ),
   dashboardSidebar(
     sidebarMenu(
@@ -164,7 +167,6 @@ ui <- dashboardPage(
       paste0("Outputs and Results"),
       menuItem("Results", tabName = "results")
     ),
-    checkboxInput("dataTransformation", "Standardize data with Hellinger method", value = TRUE),
     br(),
     h5(
       "Made with ",
@@ -359,7 +361,6 @@ ui <- dashboardPage(
       tabsetPanel(
         type = "tabs",
         id = "tabsetpanel",
-
         tabPanel(title = "Evenness Table",
                  dataTableOutput("evennessTable"), downloadButton("downloadEvenness")),
         tabPanel(title = "Abundance Table",

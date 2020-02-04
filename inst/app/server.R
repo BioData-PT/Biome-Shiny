@@ -52,45 +52,40 @@ plot_width <- function(data, mult = 12, min.width = 1060, otu.or.tax = "otu"){
   }
 }
 
-# Functions to dynamically generate chunks for the final report
-tidy_function_body <- function(fun) {
-  paste(tidy_source(text = as.character(body(fun))[-1])$text.tidy, collapse="\n")
-}
-
-make_chunk_from_function_body <- function(fun, chunk.name="", chunk.options=list()) {
-  opts <- paste(paste(names(chunk.options), chunk.options, sep="="), collapse=", ")
-  header <- paste0("```{r ", chunk.name, " ", chunk.options, "}")
-  paste(header, tidy_function_body(fun), "```", sep="\n")
-}
-
-report.source <- reactive({
-  req(sessionData$import.params(),
-      sessionData$filter.params())
-
-  report <- readLines("sc_report_base.Rmd")
-
-  insert.function <- function(report, tag, fun, chunk.name = "", chunk.options = list()) {
-    w <- which(report == tag)
-    report[w] <- make_chunk_from_function_body(fun, chunk.name = chunk.name, chunk.options = chunk.options)
-
-    return(report)
-  }
-
-  # Import
-  report <- insert.function(report, "<!-- import.fun -->", sessionData$import.fun(), chunk.name = "import")
-
-  # Filter
-  report <- insert.function(report, "<!-- filter.fun -->", sessionData$filter.fun(), chunk.name = "filter")
-
-
-  return(report)
-})
-
-#Function to collect all tables and images
-
-collect_content <- function(){
-    orca(communityPlotParams(), file = "community_plot.png")
-}
+# Functions to dynamically generate chunks for the final report - Unused for now, commented out
+# tidy_function_body <- function(fun) {
+#   paste(tidy_source(text = as.character(body(fun))[-1])$text.tidy, collapse="\n")
+# }
+# 
+# make_chunk_from_function_body <- function(fun, chunk.name="", chunk.options=list()) {
+#   opts <- paste(paste(names(chunk.options), chunk.options, sep="="), collapse=", ")
+#   header <- paste0("```{r ", chunk.name, " ", chunk.options, "}")
+#   paste(header, tidy_function_body(fun), "```", sep="\n")
+# }
+# 
+# report.source <- reactive({
+#   req(sessionData$import.params(),
+#       sessionData$filter.params())
+# 
+#   report <- readLines("sc_report_base.Rmd")
+# 
+#   insert.function <- function(report, tag, fun, chunk.name = "", chunk.options = list()) {
+#     w <- which(report == tag)
+#     report[w] <- make_chunk_from_function_body(fun, chunk.name = chunk.name, chunk.options = chunk.options)
+# 
+#     return(report)
+#   }
+# 
+#   # Import
+#   report <- insert.function(report, "<!-- import.fun -->", sessionData$import.fun(), chunk.name = "import")
+# 
+#   # Filter
+#   report <- insert.function(report, "<!-- filter.fun -->", sessionData$filter.fun(), chunk.name = "filter")
+# 
+# 
+#   return(report)
+# })
+# 
 
 
 # Modified the summarize package 
@@ -152,35 +147,45 @@ server <- function(input, output, session) {
     
     # Sample dataset selector
     if (input$datasetChoice == "Sample dataset") {
+      withProgress(message = 'Loading sample dataset...', style = "notification", value = 0.5, {
       sampleDataset <- switch(
         input$datasetSample,
         "dietswap" = dietswap,
         "atlas1006" = atlas1006
-      )
+        )
+        return(sampleDataset)
+      })
       return(sampleDataset)
     }
     
     # Biom file upload
     if(input$datasetChoice == "Biom file") {
       req(input$dataset)
+      withProgress(message = 'Loading biom file...', style = "notification", value = 0.5, {
       tryCatch({
         datapath <- input$dataset$datapath
         a <- import_biom(datapath, parseFunction = taxparse)
       }, error = function(e){
         simpleError("Error importing the .biom file.")
-      })
+      })})
       if(input$datasetType == ".biom file including sample variables") {
         return(a)
       }
       if(input$datasetType == ".biom file with .csv metadata file"){
+        withProgress(message = 'Loading metadata...', style = "notification", value = 0.5, {
         datapathMetadata <- input$datasetMetadata$datapath
         b <- as.data.frame(read.csv(datapathMetadata, skipNul = TRUE))
+        setProgress(value = 0.7, message = "Merging metadata and biom file...")
         rownames(b) <- b[, 1]
         c <- sample_data(b)
+        setProgress(value = 0.9, message = "Merging metadata and biom file...")
         biomfile <- merge_phyloseq(a,c)
+        setProgress(value = 1, message = "Loading complete!")
+        })
         return(biomfile)
       }
       if(input$datasetType == ".biom file without .csv metadata file"){
+        withProgress(message = 'Generating metadata...', style = "notification", value = 0.5, {
         tryCatch({
           if(input$samplesAreColumns == TRUE){
             samples.out <- colnames(otu_table(a))
@@ -195,7 +200,7 @@ server <- function(input, output, session) {
           b <- sample_data(samdf)
         }, error = function(e){
           simpleError("Error generating sample variables")
-        })
+        })})
         tryCatch({
           biomfile <- merge_phyloseq(a, b)
           return(biomfile)
@@ -317,7 +322,8 @@ server <- function(input, output, session) {
   
   #Uncheck all taxa
   observeEvent(input$subsetTaxaByRankUntickAll, {
-    tryCatch({
+    
+  tryCatch({
       updateCheckboxGroupInput(
         session, "subsetTaxaByRankTaxList",
         choices = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
@@ -537,23 +543,44 @@ server <- function(input, output, session) {
   })
   
   output$summary <- renderPrint({
-    summaryParams()
+    withProgress(message = 'Generating summary...', style = "notification", value = 0.1, {
+      summaryParams()
+    })
   })
   
   sampleVarsParams <- reactive({
-    list_sample_variables(datasetInput())
+      list_sample_variables(datasetInput())
   })
   
   output$sampleVars <- renderPrint({
-    as.character(sampleVarsParams())  
+    withProgress(message = 'Printing sample variables...', style = "notification", value = 0.1, {
+      as.character(sampleVarsParams())
+    })
   })
   
   ## Alpha Diversity ##
 
+  # Slider for adjusting number of decimal cases
+  
+  output$decimalSlider <- renderUI({
+    sliderInput(
+      "decimalCases",
+      "Tables: Number of decimal cases:",
+      min = 1,
+      max = 15,
+      step = 1,
+      value = "5",
+      width = "80%"
+    )
+  })
+  output$standardizationPick <- renderUI({
+    checkboxInput("dataTransformation", strong("Dataset: Standardize data with Hellinger method"), value = TRUE, width = "80%")
+  })
+  
   #Abundance and Evenness tables#
-
+  
   evennessParams <- reactive({
-    a <- evenness(datasetInput()) %>% round(digits = 5)
+    a <- evenness(datasetInput()) %>% round(digits = input$decimalCases)
     colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
     datatable(a, options = list(scrollX = TRUE))
   })
@@ -567,7 +594,7 @@ server <- function(input, output, session) {
       paste("evenness", ".csv", sep = "")
     },
     content = function(file) {
-      a <- evenness(datasetInput()) %>% round(digits = 5)
+      a <- evenness(datasetInput()) %>% round(digits = input$decimalCases)
       write.csv(a, file, row.names = TRUE)
     }
   )
@@ -590,7 +617,7 @@ server <- function(input, output, session) {
   )
 
   relativeAbundanceParams <- reactive({
-    a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = 5)
+    a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = input$decimalCases)
     datatable(a, options = list(scrollX = TRUE))
   })
   output$relativeAbundanceTable <- renderDataTable( server = FALSE, {
@@ -601,7 +628,7 @@ server <- function(input, output, session) {
       paste("relativeAbundance", ".csv", sep = "")
     },
     content = function(file) {
-      a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = 5)
+      a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = input$decimalCases)
       write.csv(a, file, row.names = TRUE)
     }
   )
@@ -628,7 +655,7 @@ server <- function(input, output, session) {
   
   #Diversity measures table
   diversityMeasuresTableParams <- reactive({
-    a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher")) %>% round(digits = 5)
+    a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher")) %>% round(digits = input$decimalCases)
     colnames(a) <- c("Observed species", "Chao1", "Standard error (Chao1)", "ACE", "Standard error (ACE)", "Shannon's diversity index","Simpson's diversity index","Inverse Simpson","Fisher's alpha")
     datatable(a, options = list(scrollX = TRUE))
   })
@@ -815,7 +842,7 @@ server <- function(input, output, session) {
     a <- adonis(t(otu) ~ m,
            data = meta, permutations = permnumber, method = input$permanovaDistanceMethodP, parallel = getOption("mc.cores")
     )
-    b <- as.data.frame(a$aov.tab)
+    b <- as.data.frame(a$aov.tab) %>% round(digits = input$decimalCases)
     names(b) <- c(metadata, "Df", "Sum Sq", "Mean Sq", "F value", "P value")
     print(b)
   })
@@ -838,7 +865,7 @@ server <- function(input, output, session) {
     meta <- meta(compositionalInput())
     dist <- vegdist(t(otu))
     metadata <- input$permanovaColumnP
-    anova(betadisper(dist, meta[[metadata]]))
+    anova(betadisper(dist, meta[[metadata]])) %>% round(digits = input$decimalCases)
   })
 
   output$homogeniety <- renderDataTable({
