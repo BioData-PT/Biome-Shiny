@@ -4,7 +4,7 @@ library(shiny)
 library(shinydashboard)
 library(shinyBS)
 library(microbiome)
-library(phyloseq)
+library(speedyseq)
 library(rmarkdown)
 library(DT)
 library(ggplot2)
@@ -22,48 +22,6 @@ library(ggplotify)
 library(RColorBrewer)
 
 ####### FUNCTIONS #######
-
-#Plot_ordered_bar function | Created by pjames1 @ https://github.com/pjames1
-plot_ordered_bar<-function (physeq, x = "Sample",
-                            y = "Abundance",
-                            fill = NULL,
-                            leg_size = 0.5,
-                            title = NULL) {
-  require(ggplot2)
-  require(phyloseq)
-  require(plyr)
-  require(grid)
-  bb <- psmelt(physeq)
-
-
-  samp_names <- aggregate(bb$Abundance, by=list(bb$Sample), FUN=sum)[,1]
-  .e <- environment()
-  bb[,fill]<- factor(bb[,fill], rev(sort(unique(bb[,fill])))) #fill to genus
-
-
-  bb<- bb[order(bb[,fill]),] # genus to fill
-  p = ggplot(bb, aes_string(x = x, y = y,
-                            fill = fill),
-             environment = .e, ordered = FALSE)
-
-
-  p = p +geom_bar(stat = "identity",
-                  position = "stack",
-                  color = "black")
-
-  p = p + theme(axis.text.x = element_text(angle = -90, hjust = 0))
-
-  p = p + guides(fill = guide_legend(override.aes = list(colour = NULL), reverse=TRUE)) +
-    theme(legend.key = element_rect(colour = "black"))
-
-  p = p + theme(legend.key.size = unit(leg_size, "cm"))
-
-
-  if (!is.null(title)) {
-    p <- p + ggtitle(title)
-  }
-  return(p)
-}
 
 #Function to dynamically set plot width (and height) for plots
 plot_width <- function(data, mult = 12, min.width = 1060, otu.or.tax = "otu"){
@@ -179,7 +137,8 @@ data("atlas1006")
 
 # UI
 ui <- dashboardPage(
-  dashboardHeader(title = "Biome-Shiny v0.9"),
+  dashboardHeader(title = "Biome-Shiny v0.9"
+  ),
   dashboardSidebar(
     sidebarMenu(
       br(),
@@ -190,7 +149,7 @@ ui <- dashboardPage(
         tabName = "intro"
       ),
 
-      menuItem("Filtering (2/3)", tabName="dataprocessing"),
+      menuItem("Filtering and Transformations (2/3)", tabName="dataprocessing"),
       menuItem("Phyloseq Summary  (3/3)", tabName="phyloseqsummary"),
       br(),
       paste0("Microbiome analysis"),
@@ -205,7 +164,7 @@ ui <- dashboardPage(
       paste0("Outputs and Results"),
       menuItem("Results", tabName = "results")
     ),
-
+    checkboxInput("dataTransformation", "Standardize data with Hellinger method", value = TRUE),
     br(),
     h5(
       "Made with ",
@@ -226,12 +185,12 @@ ui <- dashboardPage(
         width = "3",
         radioButtons(
           "datasetChoice",
-          "Dataset Upload",
-          c("Upload dataset", "Use sample dataset"),
-          selected = "Upload dataset"
+          "Data Type",
+          c("Biom file", "Phyloseq files", "Sample dataset"),
+          selected = "Biom file"
         ),
-        conditionalPanel( condition = "input.datasetChoice == 'Upload dataset'",
-                          radioButtons("datasetType", "Select dataset characteristics:", c(".biom file including sample variables",".biom file with .csv metadata file",".biom file without .csv metadata file")),
+        conditionalPanel( condition = "input.datasetChoice == 'Biom file'",
+                          radioButtons("datasetType", "Type of biom file:", c(".biom file including sample variables",".biom file with .csv metadata file",".biom file without .csv metadata file")),
                           fileInput(
                             "dataset",
                             "Dataset:",
@@ -249,12 +208,40 @@ ui <- dashboardPage(
                                       accept = c(".csv"), placeholder=".csv files"
                             )
                           ),
-                          conditionalPanel( condition = "input.datasetChoice == 'Upload dataset'",
+                          conditionalPanel( condition = "input.datasetChoice == 'Biom file'",
                             selectInput("taxParseFunction",label = "Taxonomy parsing function", choices = c("Default","QIIME","Greengenes"), selected = "Default")      
                           )
         ),
+        
         conditionalPanel(
-          condition = "input.datasetChoice == 'Use sample dataset'",
+          condition = "input.datasetChoice == 'Phyloseq files'",
+          strong("*Required"),
+          fileInput(
+            "phyloseqOTUTable",
+            "*OTU table file:",
+            multiple = FALSE, 
+            accept = c("text/csv"),
+            placeholder = "File containing OTU table"
+          ),
+          fileInput(
+            "phyloseqTaxTable",
+            "*Taxonomy table file:",
+            multiple = FALSE, 
+            accept = c("text/csv"),
+            placeholder = "File containing OTU table"
+          ),
+          fileInput(
+            "phyloseqMetadataTable",
+            "Metadata table file:",
+            multiple = FALSE, 
+            accept = c("text/csv"),
+            placeholder = "File containing OTU table"
+          ),
+          checkboxInput("samplesAreColumnsPhyloseq","OTU Table: Samples are columns", value = TRUE)
+        ),
+        
+        conditionalPanel(
+          condition = "input.datasetChoice == 'Sample dataset'",
           selectInput(
             "datasetSample",
             "Choose a sample dataset:",
@@ -264,18 +251,18 @@ ui <- dashboardPage(
         actionButton("datasetUpdate", "Update Dataset"),
         bsTooltip("datasetUpdate", "Click to update metadata rows when changing datasets.", "bottom", options = list(container = "body"))
 
-      ),
-      box(
-        paste0(
-          "Biome-shiny is a microbiome analysis pipeline developed with the Shiny library for R, and based, primarily, on the \"microbiome\" and \"phyloseq\" libraries for analysis.\n\n\n\nThe application takes a .biom file, generated by programs such as QIIME, as an input. If necessary, it is possible to upload a .csv file containing the dataset's sample data. Finally, if the user does not happen to have any sample data, the application can generate sample data out of the sample headers. For more information on the .biom file format please visit the following link: http://biom-format.org/ "
-        )
-      )
+      )#,
+      #box(
+       #paste0(
+        #   "Biome-shiny is a microbiome analysis pipeline developed with the Shiny library for R, and based, primarily, on the \"microbiome\" and \"phyloseq\" libraries for analysis.\n\n\n\nThe application takes a .biom file, generated by programs such as QIIME, as an input. If necessary, it is possible to upload a .csv file containing the dataset's sample data. Finally, if the user does not happen to have any sample data, the application can generate sample data out of the sample headers. For more information on the .biom file format please visit the following link: http://biom-format.org/ "
+      #)
+      #)
     ),
 
     tabItem(tabName="dataprocessing",
             fluidRow(
               tabBox(
-                title = "Data filtering", width = 10,
+                title = "Data Filtering and Transformation", width = 10,
                 tabPanel( "Top taxa",
                           checkboxInput("pruneTaxaCheck", "Remove non-top taxa"),
                           numericInput("pruneTaxa", label = "Number of top taxa:", value = "10", min = "1")
@@ -436,7 +423,7 @@ ui <- dashboardPage(
                                 "ordinate.method",
                                 "Ordination method:",
                                 choices = c("DCA", "CCA", "RDA", "CAP", "DPCoA", "NMDS", "MDS", "PCoA"),
-                                selected = "CCA"
+                                selected = "NMDS"
                               ),
                               selectInput(
                                 "ordinate.distance",
@@ -450,7 +437,7 @@ ui <- dashboardPage(
                                 min = 1,
                                 max = 10,
                                 step = 0.5,
-                                value = "3"
+                                value = "2"
                               ),
                               checkboxInput("transparentOrdinatePlot", "Transparent background", value = TRUE)
                             )),
@@ -476,7 +463,7 @@ ui <- dashboardPage(
                                  "ordinate.method3",
                                  "Ordination method:",
                                  choices = c("DCA", "CCA", "RDA", "CAP", "DPCoA", "NMDS", "MDS", "PCoA"),
-                                 selected = "CCA"
+                                 selected = "NMDS"
                                ),
                                selectInput(
                                  "ordinate.distance3",
@@ -490,7 +477,7 @@ ui <- dashboardPage(
                                  min = 1,
                                  max = 10,
                                  step = 0.5,
-                                 value = "3"
+                                 value = "2"
                                ),
                                checkboxInput("transparentTaxaOrd", "Transparent background", value = TRUE)
                              )),

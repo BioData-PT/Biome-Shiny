@@ -4,7 +4,7 @@ library(shiny)
 library(shinydashboard)
 library(shinyBS)
 library(microbiome)
-library(phyloseq)
+library(speedyseq)
 library(rmarkdown)
 library(DT)
 library(ggplot2)
@@ -21,47 +21,6 @@ library(biomformat)
 library(ggplotify)
 library(RColorBrewer)
 
-#Plot_ordered_bar function | Created by pjames1 @ https://github.com/pjames1
-plot_ordered_bar<-function (physeq, x = "Sample",
-                            y = "Abundance",
-                            fill = NULL,
-                            leg_size = 0.5,
-                            title = NULL) {
-  require(ggplot2)
-  require(phyloseq)
-  require(plyr)
-  require(grid)
-  bb <- psmelt(physeq)
-
-
-  samp_names <- aggregate(bb$Abundance, by=list(bb$Sample), FUN=sum)[,1]
-  .e <- environment()
-  bb[,fill]<- factor(bb[,fill], rev(sort(unique(bb[,fill])))) #fill to genus
-
-
-  bb<- bb[order(bb[,fill]),] # genus to fill
-  p = ggplot(bb, aes_string(x = x, y = y,
-                            fill = fill),
-             environment = .e, ordered = FALSE)
-
-
-  p = p +geom_bar(stat = "identity",
-                  position = "stack",
-                  color = "black")
-
-  p = p + theme(axis.text.x = element_text(angle = -90, hjust = 0))
-
-  p = p + guides(fill = guide_legend(override.aes = list(colour = NULL), reverse=TRUE)) +
-    theme(legend.key = element_rect(colour = "black"))
-
-  p = p + theme(legend.key.size = unit(leg_size, "cm"))
-
-
-  if (!is.null(title)) {
-    p <- p + ggtitle(title)
-  }
-  return(p)
-}
 
 #Function to dynamically set plot width (and height) for plots
 plot_width <- function(data, mult = 12, min.width = 1060, otu.or.tax = "otu"){
@@ -192,7 +151,7 @@ server <- function(input, output, session) {
     )
     
     # Sample dataset selector
-    if (input$datasetChoice == "Use sample dataset") {
+    if (input$datasetChoice == "Sample dataset") {
       sampleDataset <- switch(
         input$datasetSample,
         "dietswap" = dietswap,
@@ -200,7 +159,9 @@ server <- function(input, output, session) {
       )
       return(sampleDataset)
     }
-    if(input$datasetChoice == "Upload dataset") {
+    
+    # Biom file upload
+    if(input$datasetChoice == "Biom file") {
       req(input$dataset)
       tryCatch({
         datapath <- input$dataset$datapath
@@ -242,6 +203,37 @@ server <- function(input, output, session) {
           simpleError("Error merging sample variables with .biom file")
         })
       }
+    }
+    
+    # Phyloseq file upload
+    if(input$datasetChoice == "Phyloseq files"){
+      tryCatch({
+        otu <- input$phyloseqOTUTable$datapath
+        tax <- input$phyloseqTaxTable$datapath 
+        otu.tab <- as.data.table(read.csv(otu), skipNul = TRUE)
+        tax.tab <- as.data.table(read.csv(tax), skipNul = TRUE)
+        pfile <- phyloseq(otu_table(otu.tab), tax_table(tax.tab)) #Might get an error with taxa are rows
+        if(input$phyloseqMetadataTable == is.null()){
+          if(input$samplesAreColumnsPhyloseq == TRUE){
+            samples.out <- colnames(otu_table(pfile))
+          } else {
+            samples.out <- rownames(otu_table(pfile))
+          }
+          subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
+          samdf <- data.frame(Subject=subject)
+          rownames(samdf) <- samples.out
+          b <- sample_data(samdf)
+          pfile <- merge_phyloseq(pfile, b)
+          return(pfile)
+        } else {
+          meta.tab.path <- as.data.table(read.table(input$phyloseqMetadataTable$datapath), skipNul = TRUE)
+          meta.tab <- sample_data(meta.tab.path)
+          pfile <- merge(pfile, meta.tab)
+          return(pfile)
+        }
+      }, error = function(e){
+        simpleError()
+      })
     }
     
   })
@@ -294,7 +286,7 @@ server <- function(input, output, session) {
     })
   })
   
-  #Chceck all samples
+  #Check all samples
   observeEvent(input$subsetSamplesTickAll, {
     tryCatch({
       updateCheckboxGroupInput(session, "subsetSamples",
@@ -484,11 +476,10 @@ server <- function(input, output, session) {
 
   # Abundance of taxa in sample variable by taxa
   communityPlotParams <- reactive ({
-    taxglom <- tax_glom(datasetInput(), taxrank=input$v4)
-    if(input$communityPlotFacetWrap == FALSE){
-      compositionplot <- plot_ordered_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
-    } else {
-      compositionplot <- plot_ordered_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + facet_grid(paste('~',input$z2), scales = "free", space = "free") + rremove("xlab") + rremove("ylab")
+    taxglom <- speedyseq::tax_glom(datasetInput(), taxrank=input$v4)
+    compositionplot <- speedyseq::plot_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
+    if(input$communityPlotFacetWrap == TRUE){
+    compositionplot <- compositionplot + facet_grid(paste('~',input$z2), scales = "free", space = "free")
     }
     if(input$transparentCommunityPlot == TRUE){
       compositionplot <- compositionplot +
@@ -502,22 +493,20 @@ server <- function(input, output, session) {
   })
 
   communityPlotGenusParams <- reactive({
-    taxglom <- tax_glom(compositionalInput(), taxrank=input$v4)
-    if(input$communityPlotFacetWrap == FALSE){
-      compositionplot <- plot_ordered_bar(taxglom, x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
-        guides(fill = guide_legend(ncol = 1)) +
-        scale_y_percent() +
-        theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
-    } else {
-      compositionplot <- plot_ordered_bar(taxglom, x=input$z1,  fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
-        guides(fill = guide_legend(ncol = 1)) +
-        scale_y_percent() + facet_grid(paste('~',input$z2),scales = "free", space = "free") + rremove("xlab") + rremove("ylab")
+    taxglom <- tax_glom(microbiome::transform(datasetInput(), "compositional"), taxrank=input$v4)
+    compositionplot <- speedyseq::plot_bar(taxglom, x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
+      guides(fill = guide_legend(ncol = 1)) +
+      scale_y_percent() +
+      theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
+    
+    if(input$communityPlotFacetWrap == TRUE){
+      compositionplot <- compositionplot + facet_grid(paste('~',input$z2),scales = "free", space = "free")
     }
     if(input$transparentCommunityPlot == TRUE){
       compositionplot <- compositionplot +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
-    p <- ggplotly(compositionplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = "Sample", automargin = TRUE), yaxis = list(title = "Abundance", automargin = TRUE))
+    p <- ggplotly(compositionplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = input$z1, automargin = TRUE), yaxis = list(title = "Abundance", automargin = TRUE))
     return(p)
   })
   output$communityPlotGenus <- renderPlotly({
@@ -564,7 +553,7 @@ server <- function(input, output, session) {
   #Abundance and Evenness tables#
 
   evennessParams <- reactive({
-    a <- evenness(datasetInput())
+    a <- evenness(datasetInput()) %>% round(digits = 5)
     colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
     datatable(a, options = list(scrollX = TRUE))
   })
@@ -578,12 +567,14 @@ server <- function(input, output, session) {
       paste("evenness", ".csv", sep = "")
     },
     content = function(file) {
-      write.csv(evenness(datasetInput()), file, row.names = TRUE)
+      a <- evenness(datasetInput()) %>% round(digits = 5)
+      write.csv(a, file, row.names = TRUE)
     }
   )
 
   absoluteAbundanceParams <- reactive({
-    datatable(abundances(datasetInput()), options = list(scrollX = TRUE))
+    a <- abundances(datasetInput())
+    datatable(a, options = list(scrollX = TRUE))
   })
   output$absoluteAbundanceTable <- renderDataTable( server = FALSE, {
     absoluteAbundanceParams()
@@ -599,7 +590,8 @@ server <- function(input, output, session) {
   )
 
   relativeAbundanceParams <- reactive({
-    datatable(abundances(datasetInput(), transform = "compositional"), options = list(scrollX = TRUE))
+    a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = 5)
+    datatable(a, options = list(scrollX = TRUE))
   })
   output$relativeAbundanceTable <- renderDataTable( server = FALSE, {
     relativeAbundanceParams()
@@ -609,7 +601,8 @@ server <- function(input, output, session) {
       paste("relativeAbundance", ".csv", sep = "")
     },
     content = function(file) {
-      write.csv(abundances(datasetInput(), transform = "compositional"), file, row.names = TRUE)
+      a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = 5)
+      write.csv(a, file, row.names = TRUE)
     }
   )
 
@@ -635,7 +628,7 @@ server <- function(input, output, session) {
   
   #Diversity measures table
   diversityMeasuresTableParams <- reactive({
-    a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher"))
+    a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher")) %>% round(digits = 5)
     colnames(a) <- c("Observed species", "Chao1", "Standard error (Chao1)", "ACE", "Standard error (ACE)", "Shannon's diversity index","Simpson's diversity index","Inverse Simpson","Fisher's alpha")
     datatable(a, options = list(scrollX = TRUE))
   })
@@ -719,7 +712,12 @@ server <- function(input, output, session) {
   }, ignoreNULL = FALSE)
 
   compositionalInput <- reactive({
-    microbiome::transform(datasetInput(), "compositional")
+    if(input$dataTransformation == TRUE){
+     a <- microbiome::transform(datasetInput(), transform = "hellinger", target = "OTU")
+    } else {
+     a <- microbiome::transform(datasetInput(), transform = "compositional", target = "OTU")
+    }
+    return(a)
   })
 
   ordinateData <- reactive({
@@ -889,7 +887,7 @@ server <- function(input, output, session) {
   })
 
 
-  ### RESULTS ###
+  ### RESULTS ### # Needs a serious rewrite all around
 
 
   output$downloadReportAlpha <- downloadHandler(
