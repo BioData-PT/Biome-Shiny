@@ -212,12 +212,12 @@ server <- function(input, output, session) {
     
     # Phyloseq file upload
     if(input$datasetChoice == "Phyloseq files"){
-      tryCatch({
+      #tryCatch({
         otu <- input$phyloseqOTUTable$datapath
-        tax <- input$phyloseqTaxTable$datapath 
-        otu.tab <- as.data.table(read.csv(otu), skipNul = TRUE)
-        tax.tab <- as.data.table(read.csv(tax), skipNul = TRUE)
-        pfile <- phyloseq(otu_table(otu.tab), tax_table(tax.tab)) #Might get an error with taxa are rows
+        tax <- input$phyloseqTaxTable$datapath
+        otu.tab <- as.data.frame(read.csv(otu, skipNul = TRUE))
+        tax.tab <- as.data.frame(read.csv(tax,skipNul = TRUE))
+        pfile <- phyloseq(otu_table(otu.tab, taxa_are_rows = input$samplesAreColumnsPhyloseq), tax_table(tax.tab)) #Might get an error with taxa are rows
         if(input$phyloseqMetadataTable == is.null()){
           if(input$samplesAreColumnsPhyloseq == TRUE){
             samples.out <- colnames(otu_table(pfile))
@@ -236,11 +236,11 @@ server <- function(input, output, session) {
           pfile <- merge(pfile, meta.tab)
           return(pfile)
         }
-      }, error = function(e){
-        simpleError()
-      })
+      #}, error = function(e){
+       # simpleError()
+      #})
     }
-    
+
   })
 
   # New DatasetInput function works as an intermediary that checks if the dataset has been altered
@@ -269,11 +269,12 @@ server <- function(input, output, session) {
   ## Update Checkbox Group based on the chosen taxonomic rank ##
   observeEvent(input$subsetTaxaByRank, {
     tryCatch({
+      withProgress(message = 'Filtering and Transformations', detail = "Updating Taxonomic Ranks", style = "notification", min = 0, max = 1, value = 0.1, {
       updateCheckboxGroupInput(session, "subsetTaxaByRankTaxList",
                                choices = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
                                selected = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
                                inline = TRUE
-      )
+      )})
     }, error = function(e) {
       simpleError(e)
     })
@@ -281,11 +282,12 @@ server <- function(input, output, session) {
   ## Update subsetSamples Checkbox Group ##
   observeEvent(input$datasetUpdate, {
     tryCatch({
+      withProgress(message = 'Filtering and Transformations', detail = "Updating Samples", style = "notification", min = 0, max = 1, value = 0.1, {
       updateCheckboxGroupInput(session, "subsetSamples",
                                choices = colnames(otu_table(datasetChoice())),
                                selected = colnames(otu_table(datasetChoice())),
                                inline = TRUE
-      )
+      )})
     }, error = function(e) {
       simpleError(e)
     })
@@ -324,7 +326,7 @@ server <- function(input, output, session) {
   observeEvent(input$subsetTaxaByRankUntickAll, {
     
   tryCatch({
-      updateCheckboxGroupInput(
+        updateCheckboxGroupInput(
         session, "subsetTaxaByRankTaxList",
         choices = levels(data.frame(tax_table(datasetChoice()))[[input$subsetTaxaByRank]]),
         selected = NULL,
@@ -353,6 +355,7 @@ server <- function(input, output, session) {
 
   ## Function to apply filters to the dataset ##
   filterData <- reactive({
+    withProgress(message = 'Applying filters to the dataset', detail = "Please wait...", style = "notification", min = 0, max = 1, value = 0.1, {
     physeq <- datasetChoice()
     # Subset data by taxonomic rank - commented out for now since I'm having issues implementing it
     if (input$subsetTaxaByRankCheck == TRUE){
@@ -371,7 +374,7 @@ server <- function(input, output, session) {
       oldDF <- as(sample_data(physeq), "data.frame")
       newDF <- subset(oldDF, colnames(otu_table(physeq)) %in% input$subsetSamples)
       sample_data(physeq) <- sample_data(newDF)
-    }
+    }})
     return(physeq)
   })
 
@@ -415,6 +418,11 @@ server <- function(input, output, session) {
       if ( nrow(otu_table(datasetInput())) > 1000 ){
         simpleError("A maximum of 1000 OTUs are permitted. Please filter the dataset and try again.")
       } else {
+        withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
+          for(i in 1:30){ 
+              incProgress(1/30)
+              Sys.sleep(1)
+            }
         b <- heatmaply(otu_table(datasetInput()),
                        key.title = "Abundance", plot_method = "ggplot", height = 800, width = 1200,
                        heatmap_layers = theme(
@@ -422,12 +430,13 @@ server <- function(input, output, session) {
                          plot.background = element_rect(fill = "transparent"),
                          legend.background = element_rect(fill = "transparent")
                        )
-        )      }
+        )})      }
     } else {
       if (ncol(otu_table(datasetInput())) > 1000){
         simpleError("A maximum of 1000 OTUs are permitted. Please filter the dataset and try again.")
       } else {
-        b <- heatmaply(otu_table(datasetInput()),
+        withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
+          b <- heatmaply(otu_table(datasetInput()),
                        key.title = "Abundance", plot_method = "ggplot",
                        heatmap_layers = theme(
                          panel.background = element_rect(fill = "transparent"),
@@ -435,9 +444,12 @@ server <- function(input, output, session) {
                          legend.background = element_rect(fill = "transparent")
                     )
             )
+
+        })
       }
-    }
+    incProgress(amount = 0.1, message = "Plot is being generated.", detail = "This may take a bit.")
     return(b)
+    }
   })
   output$coreHeatmap <- renderPlotly({
     ggplotly(coreHeatmapParams(), height = 800, width = 1280)
@@ -482,6 +494,7 @@ server <- function(input, output, session) {
 
   # Abundance of taxa in sample variable by taxa
   communityPlotParams <- reactive ({
+    withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
     taxglom <- speedyseq::tax_glom(datasetInput(), taxrank=input$v4)
     compositionplot <- speedyseq::plot_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
     if(input$communityPlotFacetWrap == TRUE){
@@ -492,6 +505,7 @@ server <- function(input, output, session) {
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
     p <- ggplotly(compositionplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = input$z1, automargin = TRUE), yaxis = list(title = "Abundance", automargin = TRUE))
+    })
     return(p)
   })
   output$communityPlot <- renderPlotly({
@@ -499,6 +513,7 @@ server <- function(input, output, session) {
   })
 
   communityPlotGenusParams <- reactive({
+    withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
     taxglom <- tax_glom(microbiome::transform(datasetInput(), "compositional"), taxrank=input$v4)
     compositionplot <- speedyseq::plot_bar(taxglom, x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
       guides(fill = guide_legend(ncol = 1)) +
@@ -513,6 +528,7 @@ server <- function(input, output, session) {
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
     p <- ggplotly(compositionplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = input$z1, automargin = TRUE), yaxis = list(title = "Abundance", automargin = TRUE))
+    })
     return(p)
   })
   output$communityPlotGenus <- renderPlotly({
@@ -539,13 +555,12 @@ server <- function(input, output, session) {
   # Phyloseq Summary #
   summaryParams <- reactive({
     req(datasetInput())
-    as.character(summarize_phyloseq_mod(datasetInput()))
+    withProgress(message = 'Generating summary...', style = "notification", min = 0, max = 1, value = 0.1, {
+    as.character(summarize_phyloseq_mod(datasetInput()))})
   })
   
   output$summary <- renderPrint({
-    withProgress(message = 'Generating summary...', style = "notification", value = 0.1, {
       summaryParams()
-    })
   })
   
   sampleVarsParams <- reactive({
@@ -561,7 +576,7 @@ server <- function(input, output, session) {
   ## Alpha Diversity ##
 
   # Slider for adjusting number of decimal cases
-  
+
   output$decimalSlider <- renderUI({
     sliderInput(
       "decimalCases",
@@ -569,22 +584,29 @@ server <- function(input, output, session) {
       min = 1,
       max = 15,
       step = 1,
-      value = "5",
+      value = 5,
       width = "80%"
     )
   })
+  
   output$standardizationPick <- renderUI({
     checkboxInput("dataTransformation", strong("Dataset: Standardize data with Hellinger method"), value = TRUE, width = "80%")
   })
   
+  decimalCalc <- eventReactive(input$decimalCases, ignoreNULL = TRUE, {
+    input$decimalCases
+  })
+
+  
   #Abundance and Evenness tables#
   
   evennessParams <- reactive({
-    a <- evenness(datasetInput()) %>% round(digits = input$decimalCases)
+    withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {
+    a <- evenness(datasetInput()) %>% round(digits = decimalCalc())
     colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
+    })
     datatable(a, options = list(scrollX = TRUE))
   })
-
   output$evennessTable <- renderDataTable({
     evennessParams()
   })
@@ -600,7 +622,9 @@ server <- function(input, output, session) {
   )
 
   absoluteAbundanceParams <- reactive({
+    withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {
     a <- abundances(datasetInput())
+    })
     datatable(a, options = list(scrollX = TRUE))
   })
   output$absoluteAbundanceTable <- renderDataTable( server = FALSE, {
@@ -617,7 +641,9 @@ server <- function(input, output, session) {
   )
 
   relativeAbundanceParams <- reactive({
+    withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {
     a <- abundances(datasetInput(), transform = "compositional") %>% round(digits = input$decimalCases)
+    })
     datatable(a, options = list(scrollX = TRUE))
   })
   output$relativeAbundanceTable <- renderDataTable( server = FALSE, {
@@ -650,13 +676,16 @@ server <- function(input, output, session) {
 
   # Metadata table#
   metaTableParams <- reactive({
+    withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {})
     datatable(sample_data(datasetInput()), options = list(scrollX = TRUE))
   })
   
   #Diversity measures table
   diversityMeasuresTableParams <- reactive({
+    withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {
     a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher")) %>% round(digits = input$decimalCases)
     colnames(a) <- c("Observed species", "Chao1", "Standard error (Chao1)", "ACE", "Standard error (ACE)", "Shannon's diversity index","Simpson's diversity index","Inverse Simpson","Fisher's alpha")
+    })
     datatable(a, options = list(scrollX = TRUE))
   })
 
@@ -688,6 +717,7 @@ server <- function(input, output, session) {
   
   # Alpha Diversity Richness Plot #
   richnessPlotParams <- reactive({
+    withProgress(message = 'Generating plot...', style = "notification", min = 0, max = 1, value = 0.1, {
     if(input$richnessPlotGridWrap == FALSE){
       richnessplot <- plot_richness(
         datasetInput(),
@@ -709,6 +739,7 @@ server <- function(input, output, session) {
     }
     richnessplot <- richnessplot + rremove("xlab") + rremove("ylab")
     p <- ggplotly(richnessplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = input$x2, automargin = TRUE), yaxis = list(title = paste("Alpha Diversity Measure (", input$richnessChoices , ")"), automargin = TRUE))
+    })
     print(p)
   })
 
@@ -772,6 +803,7 @@ server <- function(input, output, session) {
   })
 
   ordinatePlotParams <- reactive({
+    withProgress(message = 'Generating plot...', style = "notification", value = 0.5 + 0.1, min = 0, max = 1, {
     if (ncol(sample_data(datasetInput())) > 1){
       p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = NULL ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     } else {
@@ -783,6 +815,7 @@ server <- function(input, output, session) {
       p <- p +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
+    })
     ggplotly(p, height = 500, width = 1050)
   })
 
@@ -791,6 +824,7 @@ server <- function(input, output, session) {
   })
 
   taxaOrdParams <- reactive({
+    withProgress(message = 'Generating plot...', style = "notification", value = 0.5, {
     taxaOrdplot <-
       plot_ordination(
         datasetInput(),
@@ -803,6 +837,7 @@ server <- function(input, output, session) {
       taxaOrdplot <- taxaOrdplot +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
+    })
     ggplotly(taxaOrdplot, height = 500, width = 1050)
   })
 
@@ -834,6 +869,7 @@ server <- function(input, output, session) {
   }, ignoreNULL = FALSE)
 
   permanova <- reactive({
+    withProgress(message = 'Calculating PERMANOVA...', style = "notification", value = 0.5, {
     otu <- abundances(compositionalInput())
     meta <- meta(compositionalInput())
     permnumber <- input$permanovaPermutationsP
@@ -844,6 +880,7 @@ server <- function(input, output, session) {
     )
     b <- as.data.frame(a$aov.tab) %>% round(digits = input$decimalCases)
     names(b) <- c(metadata, "Df", "Sum Sq", "Mean Sq", "F value", "P value")
+    })
     print(b)
   })
 
@@ -882,6 +919,7 @@ server <- function(input, output, session) {
   )
 
   topFactorPlotParams <- reactive({
+    withProgress(message = 'Generating plot...', style = "notification", value = 0.5, {
     otu <- abundances(compositionalInput())
     meta <- meta(compositionalInput())
     permnumber <- input$permanovaPermutationsFac
@@ -894,6 +932,7 @@ server <- function(input, output, session) {
     top.coef <- coef[rev(order(abs(coef)))[1:20]] #top 20 coefficients
     par(mar = c(3, 14, 2, 1))
      p <- barplot(sort(top.coef), horiz = T, las = 1, main = "Top taxa")
+    })
     print(p)
   })
   output$topFactorPlot <- renderPlot({
@@ -901,12 +940,14 @@ server <- function(input, output, session) {
   })
 
   netPlotParams <- reactive({
+      withProgress(message = 'Generating metadata...', style = "notification", value = 0.5, {
       n <- make_network(compositionalInput(), type = "samples", distance = input$permanovaDistanceMethodNet, max.dist = 0.2)
       p <- plot_network(n, compositionalInput(), type = "samples", shape = input$permanovaMetaShapeNet, color = input$permanovaMetadataNet, line_weight = 0.4)
 
     if(input$transparentPermanova == TRUE){
       p <- p + theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
+    })
     ggplotly(p, height = 500, width = 1050)
   })
   output$netPlot <- renderPlotly({
