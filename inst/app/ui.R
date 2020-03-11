@@ -4,7 +4,11 @@ library(shiny)
 library(shinydashboard)
 library(shinyBS)
 library(microbiome)
-library(speedyseq)
+if("speedyseq" %in% rownames(installed.packages()) == TRUE){
+  library(speedyseq)
+} else {
+  paste0("Biome-Shiny can use the 'speedyseq' library to speed up some phyloseq functions. If you'd like, you can install it from GitHub: https://github.com/mikemc/speedyseq")
+}
 library(rmarkdown)
 library(DT)
 library(ggplot2)
