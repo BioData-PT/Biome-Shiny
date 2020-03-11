@@ -4,7 +4,11 @@ library(shiny)
 library(shinydashboard)
 library(shinyBS)
 library(microbiome)
-library(speedyseq)
+if("speedyseq" %in% rownames(installed.packages()) == TRUE){
+  library(speedyseq)
+} else {
+  paste0("Biome-Shiny can use the 'speedyseq' library to speed up some phyloseq functions. If you'd like, you can install it from GitHub: https://github.com/mikemc/speedyseq")
+}
 library(rmarkdown)
 library(DT)
 library(ggplot2)
@@ -14,12 +18,7 @@ library(knitr)
 library(plyr)
 library(dplyr)
 library(ggpubr)
-library(hrbrthemes)
-library(reshape2)
 library(vegan)
-library(biomformat)
-library(ggplotify)
-library(RColorBrewer)
 
 
 #Function to dynamically set plot width (and height) for plots
@@ -51,42 +50,6 @@ plot_width <- function(data, mult = 12, min.width = 1060, otu.or.tax = "otu"){
     }
   }
 }
-
-# Functions to dynamically generate chunks for the final report - Unused for now, commented out
-# tidy_function_body <- function(fun) {
-#   paste(tidy_source(text = as.character(body(fun))[-1])$text.tidy, collapse="\n")
-# }
-# 
-# make_chunk_from_function_body <- function(fun, chunk.name="", chunk.options=list()) {
-#   opts <- paste(paste(names(chunk.options), chunk.options, sep="="), collapse=", ")
-#   header <- paste0("```{r ", chunk.name, " ", chunk.options, "}")
-#   paste(header, tidy_function_body(fun), "```", sep="\n")
-# }
-# 
-# report.source <- reactive({
-#   req(sessionData$import.params(),
-#       sessionData$filter.params())
-# 
-#   report <- readLines("sc_report_base.Rmd")
-# 
-#   insert.function <- function(report, tag, fun, chunk.name = "", chunk.options = list()) {
-#     w <- which(report == tag)
-#     report[w] <- make_chunk_from_function_body(fun, chunk.name = chunk.name, chunk.options = chunk.options)
-# 
-#     return(report)
-#   }
-# 
-#   # Import
-#   report <- insert.function(report, "<!-- import.fun -->", sessionData$import.fun(), chunk.name = "import")
-# 
-#   # Filter
-#   report <- insert.function(report, "<!-- filter.fun -->", sessionData$filter.fun(), chunk.name = "filter")
-# 
-# 
-#   return(report)
-# })
-# 
-
 
 # Modified the summarize package 
 summarize_phyloseq_mod <- function(x){
@@ -128,13 +91,16 @@ list_sample_variables <- function(x){
   as.list(a)
 }
 
-
 # Load sample datasets #
 data("dietswap")
 data("atlas1006")
 
 # Server
 server <- function(input, output, session) {
+  
+  has_data_initialized <- reactiveValues()
+  has_data_initialized$data_initialized <- FALSE
+  has_data_initialized$filters_initialized <-FALSE
   
   datasetChoice <- reactive({
     # Taxa Parse Function switch
@@ -148,11 +114,13 @@ server <- function(input, output, session) {
     # Sample dataset selector
     if (input$datasetChoice == "Sample dataset") {
       withProgress(message = 'Loading sample dataset...', style = "notification", value = 0.5, {
+      has_data_initialized$data_initialized = FALSE
       sampleDataset <- switch(
         input$datasetSample,
         "dietswap" = dietswap,
         "atlas1006" = atlas1006
         )
+        has_data_initialized$data_initialized = TRUE
         return(sampleDataset)
       })
       return(sampleDataset)
@@ -163,12 +131,14 @@ server <- function(input, output, session) {
       req(input$dataset)
       withProgress(message = 'Loading biom file...', style = "notification", value = 0.5, {
       tryCatch({
+        has_data_initialized$data_initialized = FALSE
         datapath <- input$dataset$datapath
         a <- import_biom(datapath, parseFunction = taxparse)
       }, error = function(e){
         simpleError("Error importing the .biom file.")
       })})
-      if(input$datasetType == ".biom file including sample variables") {
+      if(input$datasetType == ".biom file with sample variables") {
+        has_data_initialized$data_initialized = TRUE
         return(a)
       }
       if(input$datasetType == ".biom file with .csv metadata file"){
@@ -182,6 +152,7 @@ server <- function(input, output, session) {
         biomfile <- merge_phyloseq(a,c)
         setProgress(value = 1, message = "Loading complete!")
         })
+        has_data_initialized$data_initialized = TRUE
         return(biomfile)
       }
       if(input$datasetType == ".biom file without .csv metadata file"){
@@ -203,6 +174,7 @@ server <- function(input, output, session) {
         })})
         tryCatch({
           biomfile <- merge_phyloseq(a, b)
+          has_data_initialized$data_initialized = TRUE
           return(biomfile)
         }, error = function(e){
           simpleError("Error merging sample variables with .biom file")
@@ -242,7 +214,17 @@ server <- function(input, output, session) {
     }
 
   })
-
+  
+  # uploadDataTableParams <- reactive(
+  #   req(datasetInput),
+  #   table <- as.data.frame(input$datasetInput$datapath),
+  #   return(table)
+  # )
+  # 
+  # output$uploadDataTable <- renderTable(
+  #   uploadDataTableParams()
+  # )
+  # 
   # New DatasetInput function works as an intermediary that checks if the dataset has been altered
   datasetInput <- reactive({
     if(input$coreFilterDataset == TRUE ){ # Filters the dataset
@@ -254,6 +236,40 @@ server <- function(input, output, session) {
     return(dataset)
   })
   
+  ## Dynamic Menu ##
+  
+  output$dynamicMenu <- renderMenu(
+    
+    if( has_data_initialized$data_initialized == FALSE){
+      sidebarMenu(
+        br(),
+        strong(paste0("Waiting for dataset..."))
+      )
+    } else {
+      sidebarMenu(
+        menuItem("Filtering and Transformations (2/3)", tabName="dataprocessing"),
+        menuItem("Phyloseq Summary  (3/3)", tabName="phyloseqsummary"),
+        br(),
+        paste("Microbiome analysis"),
+        menuItem("Core microbiota", tabName = "coremicrobiota"),
+        menuItem("Community composition", tabName = "communitycomposition"),
+        menuItem("Alpha diversity", tabName = "alphadiversity"),
+        menuItem("Beta diversity", tabName = "betadiversity"),
+        br(),
+        paste0("Statistical analysis"),
+        menuItem("PERMANOVA", tabName = "permanova"),
+        br(),
+        paste("Outputs and Results"),
+        menuItem("Results", tabName = "results"),
+        br(),
+        paste("Settings"),
+        uiOutput("decimalSlider")
+      )
+    }
+  )
+  
+
+
   ## Dataset Filtering ##
   
   ## Populate SelectInput with taxonomic ranks ##
@@ -495,8 +511,8 @@ server <- function(input, output, session) {
   # Abundance of taxa in sample variable by taxa
   communityPlotParams <- reactive ({
     withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
-    taxglom <- speedyseq::tax_glom(datasetInput(), taxrank=input$v4)
-    compositionplot <- speedyseq::plot_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
+    taxglom <- tax_glom(datasetInput(), taxrank=input$v4)
+    compositionplot <- plot_bar(taxglom, x=input$z1, y="Abundance", fill=input$v4, title=paste0("Abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
     if(input$communityPlotFacetWrap == TRUE){
     compositionplot <- compositionplot + facet_grid(paste('~',input$z2), scales = "free", space = "free")
     }
@@ -515,7 +531,7 @@ server <- function(input, output, session) {
   communityPlotGenusParams <- reactive({
     withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
     taxglom <- tax_glom(microbiome::transform(datasetInput(), "compositional"), taxrank=input$v4)
-    compositionplot <- speedyseq::plot_bar(taxglom, x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
+    compositionplot <- plot_bar(taxglom, x=input$z1, fill=input$v4, title=paste0("Relative abundance by ", input$v4, " in ", input$z1))  + geom_bar(stat="identity") +
       guides(fill = guide_legend(ncol = 1)) +
       scale_y_percent() +
       theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90) + rremove("xlab") + rremove("ylab")
@@ -770,35 +786,32 @@ server <- function(input, output, session) {
   }, ignoreNULL = FALSE)
 
   compositionalInput <- reactive({
-    if(input$dataTransformation == TRUE){
-     a <- microbiome::transform(datasetInput(), transform = "hellinger", target = "OTU")
-    } else {
      a <- microbiome::transform(datasetInput(), transform = "compositional", target = "OTU")
+    return(a)
+  })
+  
+  betaDiversityInput <- reactive({
+    if(input$dataTransformation == TRUE){
+      a <- microbiome::transform(datasetInput(), transform = "hellinger", target = "OTU")
+    } else {
+      a <- compositionalInput()
     }
     return(a)
   })
 
   ordinateData <- reactive({
     ordinate(
-      compositionalInput(),
+      betaDiversityInput(),
       method = input$ordinate.method,
       distance = input$ordinate.distance
     )
   })
 
-  ordinateDataSplit <- reactive({
-    ordinate(
-      compositionalInput(),
-      method = input$ordinate.method2,
-      distance = input$ordinate.distance2
-    )
-  })
-
   ordinateDataTaxa <- reactive({
     ordinate(
-      compositionalInput(),
-      method = input$ordinate.method3,
-      distance = input$ordinate.distance3
+      betaDiversityInput(),
+      method = input$ordinate.method.taxa,
+      distance = input$ordinate.distance.taxa
     )
   })
 
@@ -832,7 +845,7 @@ server <- function(input, output, session) {
         type = "taxa",
         color = input$zb,
         label = input$xb
-      ) + geom_point(size = input$geom.size3) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      ) + geom_point(size = input$geom.size.taxa) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     if(input$transparentTaxaOrd){
       taxaOrdplot <- taxaOrdplot +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
