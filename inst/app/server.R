@@ -376,6 +376,7 @@ server <- function(input, output, session) {
     physeq <- datasetChoice()
     # Rarefy data
     if(input$rarefactionCheck == TRUE) {
+      setProgress(message = "Applying rarefaction...", value = 0.2)
       physeqRare <- rarefy_even_depth(physeq, sample.size = min(sample_sums(physeq)),
                                       replace = input$rarefactionReplace,
                                       rngseed = input$rarefactionSeed )
@@ -383,6 +384,7 @@ server <- function(input, output, session) {
     }
     # Subset data by taxonomic rank - commented out for now since I'm having issues implementing it
     if (input$subsetTaxaByRankCheck == TRUE){
+      setProgress(message = "Filtering out taxa...", value = 0.3)
       oldMA <- tax_table(physeq)
       oldDF <- data.frame(oldMA)
       newMA <- prune_taxa(oldDF[[input$subsetTaxaByRank]] %in% input$subsetTaxaByRankTaxList, oldMA)
@@ -390,15 +392,18 @@ server <- function(input, output, session) {
     }
     #Filter out non-top taxa
     if (input$pruneTaxaCheck == TRUE){
+      setProgress(message = "Removing non-top taxa...", value = 0.6)
       filterTaxa <- names(sort(taxa_sums(physeq), decreasing = TRUE)[1:input$pruneTaxa])
       physeq <- prune_taxa(filterTaxa, physeq)
     }
     #Filter out samples
     if (input$subsetSamplesCheck == TRUE){
+      setProgress(message = "Removing unwanted samples...", value = 0.8)
       oldDF <- as(sample_data(physeq), "data.frame")
       newDF <- subset(oldDF, colnames(otu_table(physeq)) %in% input$subsetSamples)
       sample_data(physeq) <- sample_data(newDF)
     }})
+    setProgress(message = "Finishing...", value = 0.9)
     return(physeq)
   })
 
@@ -826,11 +831,11 @@ server <- function(input, output, session) {
   ordinatePlotParams <- reactive({
     withProgress(message = 'Generating plot...', style = "notification", value = 0.5 + 0.1, min = 0, max = 1, {
     if (ncol(sample_data(datasetInput())) > 1){
-      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = NULL ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     } else {
       a <- datasetInput()
       sample_data(a)[,2] <- sample_data(a)[,1]
-      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = NULL ) + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     }
     if(input$transparentOrdinatePlot){
       p <- p +
@@ -851,6 +856,7 @@ server <- function(input, output, session) {
         datasetInput(),
         ordinateDataTaxa(),
         type = "taxa",
+        title = "Ordination Plot",
         color = input$zb,
         label = input$xb
       ) + geom_point(size = input$geom.size.taxa) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
@@ -946,9 +952,11 @@ server <- function(input, output, session) {
     permnumber <- input$permanovaPermutationsFac
     metadata <- input$permanovaColumnFac
     column <- meta[[metadata]]
+    incProgress(message = 'Running PERMANOVA...', amount = 0.1)
     permanova <- adonis(t(otu) ~ column,
                         data = meta, permutations = permnumber, method = input$permanovaDistanceMethodFac
     )
+    incProgress(message = "Printing plot...", amount = 0.2)
     coef <- coefficients(permanova)["column1",]
     top.coef <- coef[rev(order(abs(coef)))[1:20]] #top 20 coefficients
     par(mar = c(3, 14, 2, 1))
@@ -961,13 +969,14 @@ server <- function(input, output, session) {
   })
 
   netPlotParams <- reactive({
-      withProgress(message = 'Generating metadata...', style = "notification", value = 0.5, {
+      withProgress(message = 'Making network...', style = "notification", value = 0.3, {
       n <- make_network(compositionalInput(), type = "samples", distance = input$permanovaDistanceMethodNet, max.dist = 0.2)
+      incProgress(message = "Plotting network...", amount = 0.3)
       p <- plot_network(n, compositionalInput(), type = "samples", shape = input$permanovaMetaShapeNet, color = input$permanovaMetadataNet, line_weight = 0.4)
-
-    if(input$transparentPermanova == TRUE){
-      p <- p + theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
-    }
+      if(input$transparentPermanova == TRUE){
+        incProgress(message = "Adding transparency...", amount = 0.3)
+        p <- p + theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
+      }
     })
     ggplotly(p, height = 500, width = 1050)
   })
@@ -993,7 +1002,7 @@ server <- function(input, output, session) {
       owd <- setwd(tempdir())
       on.exit(setwd(owd))
       file.copy(src, 'final_report.Rmd', overwrite = TRUE)
-
+      
       out <- rmarkdown::render('final_report.Rmd',
                                switch(input$format,
                                       PDF = pdf_document(),
