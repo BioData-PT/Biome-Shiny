@@ -19,6 +19,7 @@ library(plyr)
 library(dplyr)
 library(ggpubr)
 library(vegan)
+library(hrbrthemes)
 
 ####### FUNCTIONS #######
 
@@ -216,6 +217,11 @@ ui <- dashboardPage( skin = "red",
               column( width = 6,
               tabBox(
                 title = "Data Filtering and Transformation", width = 10,
+                tabPanel("Rarefaction",
+                        checkboxInput("rarefactionCheck","Rarefy dataset"),
+                        numericInput("rarefactionSeed", "Seed", value = "42"),
+                        checkboxInput("rarefactionReplace", "Sample with replace", value = FALSE)
+                ),
                 tabPanel( "Top taxa",
                           checkboxInput("pruneTaxaCheck", "Remove non-top taxa"),
                           numericInput("pruneTaxa", label = "Number of top taxa:", value = "10", min = "1")

@@ -19,6 +19,7 @@ library(plyr)
 library(dplyr)
 library(ggpubr)
 library(vegan)
+library(hrbrthemes)
 
 
 #Function to dynamically set plot width (and height) for plots
@@ -373,6 +374,13 @@ server <- function(input, output, session) {
   filterData <- reactive({
     withProgress(message = 'Applying filters to the dataset', detail = "Please wait...", style = "notification", min = 0, max = 1, value = 0.1, {
     physeq <- datasetChoice()
+    # Rarefy data
+    if(input$rarefactionCheck == TRUE) {
+      physeqRare <- rarefy_even_depth(physeq, sample.size = min(sample_sums(physeq)),
+                                      replace = input$rarefactionReplace,
+                                      rngseed = input$rarefactionSeed )
+      physeq <- physeqRare
+    }
     # Subset data by taxonomic rank - commented out for now since I'm having issues implementing it
     if (input$subsetTaxaByRankCheck == TRUE){
       oldMA <- tax_table(physeq)
@@ -435,12 +443,12 @@ server <- function(input, output, session) {
         simpleError("A maximum of 1000 OTUs are permitted. Please filter the dataset and try again.")
       } else {
         withProgress(message = 'Generating plot...', detail = "This may take a bit.", style = "notification", min = 0, max = 1, value = 0.1, {
-          for(i in 1:30){ 
-              incProgress(1/30)
-              Sys.sleep(1)
-            }
+          # for(i in 1:30){ 
+          #     incProgress(1/30)
+          #     Sys.sleep(1)
+          #   }
         b <- heatmaply(otu_table(datasetInput()),
-                       key.title = "Abundance", plot_method = "ggplot", height = 800, width = 1200,
+                       key.title = "Abundance", plot_method = "ggplot", height = "100%", width = "100%",
                        heatmap_layers = theme(
                          panel.background = element_rect(fill = "transparent"),
                          plot.background = element_rect(fill = "transparent"),
@@ -468,7 +476,7 @@ server <- function(input, output, session) {
     }
   })
   output$coreHeatmap <- renderPlotly({
-    ggplotly(coreHeatmapParams(), height = 800, width = 1280)
+    ggplotly(coreHeatmapParams()) %>% config(editable = T, autosizable = T)
   })
 
   ## Community Composition ##
@@ -525,7 +533,7 @@ server <- function(input, output, session) {
     return(p)
   })
   output$communityPlot <- renderPlotly({
-    communityPlotParams()
+    communityPlotParams() %>% config(editable = T, autosizable = T)
   })
 
   communityPlotGenusParams <- reactive({
@@ -564,7 +572,7 @@ server <- function(input, output, session) {
   })
 
   output$communityPrevalence <- renderPlotly({
-    communityPrevalenceParams()
+    communityPrevalenceParams() 
   })
 
 
@@ -760,7 +768,7 @@ server <- function(input, output, session) {
   })
 
   output$richnessPlot <- renderPlotly({
-    richnessPlotParams()
+    richnessPlotParams() %>% config(editable = T, autosizable = T)
   })
 
   ## Beta Diversity ##
@@ -833,7 +841,7 @@ server <- function(input, output, session) {
   })
 
   output$ordinatePlot <- renderPlotly({
-    ordinatePlotParams()
+    ordinatePlotParams() %>% config(editable = T, autosizable = T)
   })
 
   taxaOrdParams <- reactive({
@@ -855,7 +863,7 @@ server <- function(input, output, session) {
   })
 
   output$taxaOrd <- renderPlotly({
-    taxaOrdParams()
+    taxaOrdParams() %>% config(editable = T, autosizable = T)
   })
 
   ###########################
@@ -964,7 +972,7 @@ server <- function(input, output, session) {
     ggplotly(p, height = 500, width = 1050)
   })
   output$netPlot <- renderPlotly({
-    netPlotParams()
+    netPlotParams() %>% config(editable = T, autosizable = T)
   })
 
 

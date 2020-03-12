@@ -11,6 +11,6 @@ License: GPLv3
 Encoding: UTF-8
 LazyData: true
 biocViews:
-Imports: shiny, shinydashboard, shinyBS, rmarkdown, DT, ggplot2, plotly, knitr, dplyr, ggpubr, vegan, heatmaply, BiocManager, biomformat, phyloseq, microbiome
+Imports: shiny, shinydashboard, shinyBS, rmarkdown, DT, ggplot2, plotly, knitr, dplyr, ggpubr, vegan, heatmaply, BiocManager, biomformat, phyloseq, microbiome, hrbrthemes
 
     
