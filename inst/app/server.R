@@ -632,7 +632,9 @@ server <- function(input, output, session) {
   evennessParams <- reactive({
     withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {
     a <- evenness(datasetInput()) %>% round(digits = decimalCalc())
+    setProgress(message = "Rounding values...", value = 0.4)
     colnames(a) <- c("Camargo","Pielou","Simpson","Smith and Wilson's Evar","Bulla")
+    setProgress(message = "Rendering table...", value = 0.7)
     })
     datatable(a, options = list(scrollX = TRUE))
   })
@@ -713,7 +715,9 @@ server <- function(input, output, session) {
   diversityMeasuresTableParams <- reactive({
     withProgress(message = 'Generating table...', style = "notification", min = 0, max = 1, value = 0.1, {
     a <- estimate_richness(datasetInput(), measures = c("Observed","Chao1","Ace","Shannon","Simpson","InvSimpson","Fisher")) %>% round(digits = input$decimalCases)
+    setProgress(message = "Rounding values...", value = 0.5)
     colnames(a) <- c("Observed species", "Chao1", "Standard error (Chao1)", "ACE", "Standard error (ACE)", "Shannon's diversity index","Simpson's diversity index","Inverse Simpson","Fisher's alpha")
+    setProgress(message = "Rendering table...", value = 0.8)
     })
     datatable(a, options = list(scrollX = TRUE))
   })
@@ -748,6 +752,7 @@ server <- function(input, output, session) {
   richnessPlotParams <- reactive({
     withProgress(message = 'Generating plot...', style = "notification", min = 0, max = 1, value = 0.1, {
     if(input$richnessPlotGridWrap == FALSE){
+      setProgress(message = "Generating plot...", value = 0.3)
       richnessplot <- plot_richness(
         datasetInput(),
         x = input$x2,
@@ -755,6 +760,7 @@ server <- function(input, output, session) {
         color = input$x3
       ) + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90)
     } else {
+      setProgress(message = "Generating plot...", value = 0.3)
       richnessplot <- plot_richness(
         datasetInput(),
         x = input$x2,
@@ -762,12 +768,15 @@ server <- function(input, output, session) {
         color = input$x3 ) +
         facet_grid(paste('~',input$x),scales = "free", space = "free") + theme_pubr(base_size = 10, margin = TRUE, legend = "right", x.text.angle = 90)
     }
+      setProgress(message = "Generating plot...", value = 0.5)
     if(input$transparentRichness == TRUE){
       richnessplot <- richnessplot +
       theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
+    setProgress(message = "Generating plot...", value = 0.7)
     richnessplot <- richnessplot + rremove("xlab") + rremove("ylab")
     p <- ggplotly(richnessplot, height = 500, width = plot_width(datasetInput())) %>% layout(xaxis = list(title = input$x2, automargin = TRUE), yaxis = list(title = paste("Alpha Diversity Measure (", input$richnessChoices , ")"), automargin = TRUE))
+    setProgress(message = "Generating plot...", value = 0.9)
     })
     print(p)
   })
@@ -829,18 +838,23 @@ server <- function(input, output, session) {
   })
 
   ordinatePlotParams <- reactive({
-    withProgress(message = 'Generating plot...', style = "notification", value = 0.5 + 0.1, min = 0, max = 1, {
+    withProgress(message = 'Generating plot...', style = "notification", value = 0.2, min = 0, max = 1, {
     if (ncol(sample_data(datasetInput())) > 1){
+      setProgress("Generating plot...", value = 0.5)
       p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     } else {
+      setProgress("Preparing data...", value = 0.4)
       a <- datasetInput()
       sample_data(a)[,2] <- sample_data(a)[,1]
+      setProgress("Generating plot...", value = 0.5)
       p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     }
     if(input$transparentOrdinatePlot){
+      setProgress("Adding transparency...", value = 0.8)
       p <- p +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
+    setProgress("Generating plot...", value = 0.9)
     })
     ggplotly(p, height = 500, width = 1050)
   })
@@ -860,10 +874,13 @@ server <- function(input, output, session) {
         color = input$zb,
         label = input$xb
       ) + geom_point(size = input$geom.size.taxa) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+    setProgress("Generating plot...", value = 0.8)
     if(input$transparentTaxaOrd){
+      setProgress("Adding transparency...", value = 0.9)
       taxaOrdplot <- taxaOrdplot +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
     }
+    setProgress("Generating plot...", value = 0.9)
     })
     ggplotly(taxaOrdplot, height = 500, width = 1050)
   })
@@ -902,11 +919,14 @@ server <- function(input, output, session) {
     permnumber <- input$permanovaPermutationsP
     metadata <- input$permanovaColumnP
     m <- meta[[metadata]]
+    setProgress("Calculating PERMANOVA...", value = 0.6)
     a <- adonis(t(otu) ~ m,
            data = meta, permutations = permnumber, method = input$permanovaDistanceMethodP, parallel = getOption("mc.cores")
     )
+    setProgress("Calculating PERMANOVA...", value = 0.8)
     b <- as.data.frame(a$aov.tab) %>% round(digits = input$decimalCases)
     names(b) <- c(metadata, "Df", "Sum Sq", "Mean Sq", "F value", "P value")
+    setProgress("Generating plot...", value = 0.9)
     })
     print(b)
   })
@@ -995,19 +1015,21 @@ server <- function(input, output, session) {
       ))
     },
     content = function(file) {
+      withProgress(message = 'Generating report...', detail = 'This may take a bit.',style = "notification", value = 0.2, {
       src <- normalizePath('final_report.Rmd')
-
+      setProgress(message = 'Setting temporary path...', value = 0.5)
       # temporarily switch to the temp dir, in case you do not have write
       # permission to the current working directory
       owd <- setwd(tempdir())
       on.exit(setwd(owd))
       file.copy(src, 'final_report.Rmd', overwrite = TRUE)
-      
+      setProgress(message = "Rendering report...", value = 0.8)
       out <- rmarkdown::render('final_report.Rmd',
                                switch(input$format,
                                       PDF = pdf_document(),
                                       HTML = html_document()
                                ))
+    })
       file.rename(out, file)
     }
   )
