@@ -1,4 +1,3 @@
-# Biome-shiny 0.9 - UI
 
 library(shiny)
 library(shinydashboard)
@@ -104,7 +103,7 @@ data("atlas1006")
 # UI
 ui <- dashboardPage( skin = "red",
 
-  dashboardHeader(title = "Biome-Shiny v0.9"),
+  dashboardHeader(title = "Biome-Shiny v1.0"),
   dashboardSidebar(
     sidebarMenu(
       br(),
@@ -402,6 +401,8 @@ ui <- dashboardPage( skin = "red",
                                 choices = c("bray", "jaccard", "unifrac"),
                                 selected = "bray"
                               ),
+                              strong("Aesthetic options:"),
+                              #checkboxInput("polygonOrdinatePlot", "Enable lines", value = TRUE),
                               checkboxInput("dataTransformation", strong("Dataset:  Transform data with Hellinger method"), value = TRUE, width = "80%"),
                               sliderInput(
                                 "geom.size",
@@ -443,6 +444,7 @@ ui <- dashboardPage( skin = "red",
                                  choices = c("bray", "jaccard", "unifrac"),
                                  selected = "bray"
                                ),
+                               strong("Aesthetic options:"),
                                sliderInput(
                                  "geom.size.taxa",
                                  "Point size:",
@@ -451,6 +453,7 @@ ui <- dashboardPage( skin = "red",
                                  step = 0.5,
                                  value = "2"
                                ),
+                               checkboxInput("splitTaxaOrd", "Enable facet_wrap", value = TRUE),
                                checkboxInput("transparentTaxaOrd", "Transparent background", value = TRUE)
                              )),
                    tabPanel(title = "Plot", plotlyOutput("taxaOrd"))
