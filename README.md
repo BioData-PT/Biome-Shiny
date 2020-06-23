@@ -12,6 +12,8 @@ License][cc-by].
 
 ## Biome-Shiny: A Shiny R app for microbiome visualization
 
+Test this tool at tooldemos.biodata.pt
+
 ### Introduction
 
 Biome-Shiny is a graphical interface for visualizing microbiome data, primarily based around the "phyloseq" and "microbiome" libraries, with the "shiny" library being used to develop the interface. It provides a user-friendly interface to generate and visualize community composition and diversity through interactive plots.
