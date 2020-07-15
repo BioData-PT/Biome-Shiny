@@ -12,7 +12,8 @@ License][cc-by].
 
 ## Biome-Shiny: A Shiny R app for microbiome visualization
 
-Test this tool at tooldemos.biodata.pt
+Test this tool at https://tooldemos.biodata.pt/
+
 Have questions? Ask us directly at https://forum.biodata.pt/
 
 ### Introduction
