@@ -16,6 +16,9 @@ Test this tool at https://tooldemos.biodata.pt/
 
 Have questions? Ask us directly at https://forum.biodata.pt/
 
+If you would like to contribute to this tool, please read our Code of Conduct and Contributing guidelines at https://github.com/BioData-PT/Documents
+
+
 ### Introduction
 
 Biome-Shiny is a graphical interface for visualizing microbiome data, primarily based around the "phyloseq" and "microbiome" libraries, with the "shiny" library being used to develop the interface. It provides a user-friendly interface to generate and visualize community composition and diversity through interactive plots.
