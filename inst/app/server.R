@@ -1,4 +1,4 @@
-# Biome-shiny 0.9 - Server
+# Biome-Shiny 1.0 - Server
 
 library(shiny)
 library(shinydashboard)
@@ -17,6 +17,7 @@ library(heatmaply)
 library(knitr)
 library(plyr)
 library(dplyr)
+library(tibble)
 library(ggpubr)
 library(vegan)
 library(hrbrthemes)
@@ -103,6 +104,16 @@ server <- function(input, output, session) {
   has_data_initialized$data_initialized <- FALSE
   has_data_initialized$filters_initialized <-FALSE
   
+  
+  datasetChoice <- function(dataset){
+    
+  }
+  datasetA <- reactive({
+    bur <- input$phyloseqOTUTable$datapath
+    return(bur)
+  })
+  datasetTest <-renderText({datasetA()})
+  
   datasetChoice <- reactive({
     # Taxa Parse Function switch
     taxparse <- switch(
@@ -111,7 +122,7 @@ server <- function(input, output, session) {
       "QIIME" = parse_taxonomy_qiime,
       "Greengenes" = parse_taxonomy_greengenes
     )
-    
+
     # Sample dataset selector
     if (input$datasetChoice == "Sample dataset") {
       withProgress(message = 'Loading sample dataset...', style = "notification", value = 0.5, {
@@ -125,6 +136,55 @@ server <- function(input, output, session) {
         return(sampleDataset)
       })
       return(sampleDataset)
+    }
+    
+    # Tabular file upload
+    # I have no idea why this doesn't work.
+    if(input$datasetChoice == "Tabular files"){
+      otu <- input$phyloseqOTUTable$datapath
+      tax <- input$phyloseqTaxTable$datapath
+       otu.tab <- read.table(otu)
+       tax.tab <- read.table(tax)
+      # biomfile <- phyloseq( #aggs
+      #    otu_table(otu.tab, taxa_are_rows = input$samplesAreColumnsPhyloseq), #aggs
+      #    tax_table(as.matrix(tax.tab)) #aggs
+      #   ) #Might get an error with taxa are rows #aggs
+       if(is.null(input$phyloseqMetadataTable)){ #aggs: is.null() takes 1 argument 
+         if(input$samplesAreColumnsPhyloseq == TRUE){
+           samples.out <- colnames(otu_table(biomfile))
+         } else {
+           samples.out <- rownames(otu_table(biomfile))
+         }
+         subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
+         samdf <- data.frame(Subject=subject)
+         rownames(samdf) <- samples.out
+         b <- sample_data(samdf)
+         pfile <- merge_phyloseq(biomfile, b)
+         has_data_initialized$data_initialized = TRUE
+         return(biomfile)
+       } else {
+         if(input$headerCheck == TRUE){
+           meta.tab.path <- as.data.frame(read.table(input$phyloseqMetadataTable$datapath, header = TRUE), skipNul = TRUE) #aggs
+         } else {
+           meta.tab.path <- as.data.frame(read.table(input$phyloseqMetadataTable$datapath), skipNul = TRUE) #aggs
+         }
+         if(input$rowCheck == TRUE){
+           rownames(meta.tab.path) <- meta.tab.path[,1]
+         }
+         #meta.tab <- sample_data(meta.tab.path) #aggs
+         #biomfile <- merge(biomfile, meta.tab) #aggs
+         
+       }
+       ######################################################################################
+       #  aggs
+       biomfile <- phyloseq(
+         otu_table(otu.tab, taxa_are_rows = input$samplesAreColumnsPhyloseq), 
+         tax_table(as.matrix(tax.tab)), 
+         sample_data(meta.tab.path)
+       )
+       #######################################################################################
+       has_data_initialized$data_initialized = TRUE
+       return(biomfile)
     }
     
     # Biom file upload
@@ -181,37 +241,6 @@ server <- function(input, output, session) {
           simpleError("Error merging sample variables with .biom file")
         })
       }
-    }
-    
-    # Phyloseq file upload
-    if(input$datasetChoice == "Phyloseq files"){
-      #tryCatch({
-        otu <- input$phyloseqOTUTable$datapath
-        tax <- input$phyloseqTaxTable$datapath
-        otu.tab <- as.data.frame(read.csv(otu, skipNul = TRUE))
-        tax.tab <- as.data.frame(read.csv(tax,skipNul = TRUE))
-        pfile <- phyloseq(otu_table(otu.tab, taxa_are_rows = input$samplesAreColumnsPhyloseq), tax_table(tax.tab)) #Might get an error with taxa are rows
-        if(input$phyloseqMetadataTable == is.null()){
-          if(input$samplesAreColumnsPhyloseq == TRUE){
-            samples.out <- colnames(otu_table(pfile))
-          } else {
-            samples.out <- rownames(otu_table(pfile))
-          }
-          subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
-          samdf <- data.frame(Subject=subject)
-          rownames(samdf) <- samples.out
-          b <- sample_data(samdf)
-          pfile <- merge_phyloseq(pfile, b)
-          return(pfile)
-        } else {
-          meta.tab.path <- as.data.table(read.table(input$phyloseqMetadataTable$datapath), skipNul = TRUE)
-          meta.tab <- sample_data(meta.tab.path)
-          pfile <- merge(pfile, meta.tab)
-          return(pfile)
-        }
-      #}, error = function(e){
-       # simpleError()
-      #})
     }
 
   })
@@ -812,6 +841,7 @@ server <- function(input, output, session) {
     return(a)
   })
   
+  #Function to prepare
   betaDiversityInput <- reactive({
     if(input$dataTransformation == TRUE){
       a <- microbiome::transform(datasetInput(), transform = "hellinger", target = "OTU")
@@ -821,6 +851,7 @@ server <- function(input, output, session) {
     return(a)
   })
 
+  # Perform ordination
   ordinateData <- reactive({
     ordinate(
       betaDiversityInput(),
@@ -837,18 +868,37 @@ server <- function(input, output, session) {
     )
   })
 
+  # Hack solution to add samples names to ordination plots
+  # ordinateSamplesColumn <- reactive({
+  #   if(input$datasetChoice == "Sample dataset"){
+  #     samplesCol <- colnames(otu_table(datasetInput()))
+  #   }
+  #   if(input$datasetChoice == "Biom file"){
+  #     if(input$samplesAreColumns == TRUE){
+  #       samplesCol <- colnames(otu_table(datasetInput()))
+  #     } else {
+  #       samplesCol <- rownames(otu_table(datasetInput()))
+  #     }
+  #   }
+  #   return(samplesCol)
+  # })
+  
   ordinatePlotParams <- reactive({
     withProgress(message = 'Generating plot...', style = "notification", value = 0.2, min = 0, max = 1, {
+    a <- datasetInput()
     if (ncol(sample_data(datasetInput())) > 1){
       setProgress("Generating plot...", value = 0.5)
-      p <- phyloseq::plot_ordination(datasetInput(), ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
+      p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     } else {
       setProgress("Preparing data...", value = 0.4)
-      a <- datasetInput()
       sample_data(a)[,2] <- sample_data(a)[,1]
       setProgress("Generating plot...", value = 0.5)
       p <- phyloseq::plot_ordination(a, ordinateData(), color = input$xb, label = NULL, title = "Ordination Plot") + geom_point(size = input$geom.size) + theme_pubr(base_size = 10, margin = TRUE, legend = "right")
     }
+    # if(input$polygonOrdinatePlot){
+    #   setProgress("Adding lines...", value = 0.7)
+    #   p <- p + geom_line(aes(fill=input$xb))
+    # }
     if(input$transparentOrdinatePlot){
       setProgress("Adding transparency...", value = 0.8)
       p <- p +
@@ -879,6 +929,9 @@ server <- function(input, output, session) {
       setProgress("Adding transparency...", value = 0.9)
       taxaOrdplot <- taxaOrdplot +
         theme(panel.background = element_rect(fill = "transparent", colour = NA), plot.background = element_rect(fill = "transparent", colour = NA), legend.background = element_rect(fill = "transparent", colour = NA), legend.box.background = element_rect(fill = "transparent", colour = NA))
+    }
+    if(input$splitTaxaOrd){
+      taxaOrdplot <- taxaOrdplot + facet_wrap(paste('~',input$zb), 3)
     }
     setProgress("Generating plot...", value = 0.9)
     })

@@ -109,7 +109,8 @@ ui <- dashboardPage( skin = "red",
       br(),
       paste0("Data Upload and Pre-Processing"),
       br(),
-      menuItem( "Data Upload  (1/3)", tabName = "intro")
+      menuItem( "Data Upload  (1/3)", tabName = "intro"),
+      menuItem("Test", tabName="test")
       ),
     #   sidebarMenu(
     # ),
@@ -132,6 +133,12 @@ ui <- dashboardPage( skin = "red",
     tabItems(
     #Introduction tab#
     tabItem(
+      tabName = "test",
+      box(
+        textOutput("datasetTest")
+      )
+    ),
+    tabItem(
       tabName = "intro",
       h2("Data Upload"),
       br(),
@@ -142,7 +149,7 @@ ui <- dashboardPage( skin = "red",
           "datasetChoice",
           "Data Type",
           c("Biom file", 
-            #"Phyloseq files", 
+            "Tabular files", 
             "Sample dataset"),
           selected = "Biom file"
         ),
@@ -163,39 +170,45 @@ ui <- dashboardPage( skin = "red",
                             fileInput("datasetMetadata", ".csv metadata file (sample variables):",
                                       multiple = FALSE,
                                       accept = c(".csv"), placeholder=".csv files"
-                            )
-                          ),
+                            )                          ),
                           conditionalPanel( condition = "input.datasetChoice == 'Biom file'",
                             selectInput("taxParseFunction",label = "Taxonomy parsing function", choices = c("Default","QIIME","Greengenes"), selected = "Default")      
                           )
         ),
-        
-        # conditionalPanel(
-        #   condition = "input.datasetChoice == 'Phyloseq files'",
-        #   strong("*Required"),
-        #   fileInput(
-        #     "phyloseqOTUTable",
-        #     "*OTU table file:",
-        #     multiple = FALSE, 
-        #     accept = c("text/csv"),
-        #     placeholder = "File containing OTU table"
-        #   ),
-        #   fileInput(
-        #     "phyloseqTaxTable",
-        #     "*Taxonomy table file:",
-        #     multiple = FALSE, 
-        #     accept = c("text/csv"),
-        #     placeholder = "File containing tax table"
-        #   ),
-        #   fileInput(
-        #     "phyloseqMetadataTable",
-        #     "Metadata table file:",
-        #     multiple = FALSE, 
-        #     accept = c("text/csv"),
-        #     placeholder = "File containing metadata table"
-        #   ),
-        #   checkboxInput("samplesAreColumnsPhyloseq","OTU Table: Samples are columns", value = TRUE)
+        # conditionalPanel( condition = "input.DatasetChoice == 'Tabular files'"
+        #                   radiobuttons()
+        #                   conditionalPanel(conditi)                
         # ),
+        
+        conditionalPanel(
+          condition = "input.datasetChoice == 'Tabular files'",
+          strong("*Required"),
+          fileInput(
+            "phyloseqOTUTable",
+            "*OTU table file:",
+            multiple = FALSE,
+            accept = c("text/csv"),
+            placeholder = "File containing OTU table"
+          ),
+          fileInput(
+            "phyloseqTaxTable",
+            "*Taxonomy table file:",
+            multiple = FALSE,
+            accept = c("text/csv"),
+            placeholder = "File containing tax table"
+          ),
+          fileInput(
+            "phyloseqMetadataTable",
+            "Metadata table file:",
+            multiple = FALSE,
+            accept = c("text/csv"),
+            placeholder = "File containing metadata table (optional)"
+          ),
+          checkboxInput("headerCheck", "Metadata: Use first row as header", value = TRUE),
+          checkboxInput("rowCheck", "Metadata: Use first column values as sample names", value = TRUE),
+          
+          checkboxInput("samplesAreColumnsPhyloseq","OTU Table: Samples are columns", value = TRUE)
+        ),
         
         conditionalPanel(
           condition = "input.datasetChoice == 'Sample dataset'",
