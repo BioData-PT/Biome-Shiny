@@ -1,3 +1,6 @@
+> [!WARNING]  
+> **This tool is no longer maintaned.** For inquiries about this or other BioData.pt | ELIXIR Portugal tools and services, please reach out to <info@biodata.pt>.
+
 [![CC BY 4.0][cc-by-shield]][cc-by]
 
 This work is licensed under a [Creative Commons Attribution 4.0 International
